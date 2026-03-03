@@ -1,0 +1,2519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ToIvy Education Student Data Archive</title>
+    <!-- Tailwind CSS v3 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- jsPDF for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Tailwind Configuration -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1e40af', // Education blue
+                        secondary: '#3b82f6',
+                        accent: '#f97316',
+                        neutral: '#f3f4f6',
+                        'neutral-dark': '#9ca3af'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif']
+                    },
+                    boxShadow: {
+                        'card': '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                        'card-hover': '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)'
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .transition-all-300 {
+                transition: all 0.3s ease;
+            }
+            .drag-handle {
+                cursor: grab;
+            }
+            .drag-handle:active {
+                cursor: grabbing;
+            }
+            .sortable-ghost {
+                opacity: 0.5;
+                background-color: #e0e7ff;
+            }
+            .sortable-drag {
+                opacity: 0.8;
+            }
+            .form-input-focus {
+                @apply focus:ring-2 focus:ring-primary focus:border-primary focus:outline-none;
+            }
+            .btn {
+                @apply px-4 py-2 rounded-md font-medium transition-all-300;
+            }
+            .btn-primary {
+                @apply bg-primary text-white hover:bg-primary/90 active:bg-primary/80;
+            }
+            .btn-secondary {
+                @apply bg-secondary text-white hover:bg-secondary/90 active:bg-secondary/80;
+            }
+            .btn-accent {
+                @apply bg-accent text-white hover:bg-accent/90 active:bg-accent/80;
+            }
+            .btn-outline {
+                @apply border border-gray-300 hover:bg-gray-50 active:bg-gray-100;
+            }
+            .btn-danger {
+                @apply bg-red-500 text-white hover:bg-red-600 active:bg-red-700;
+            }
+            .card {
+                @apply bg-white rounded-lg shadow-card p-6 transition-all-300 hover:shadow-card-hover;
+            }
+            .badge {
+                @apply px-2 py-1 text-xs font-medium rounded-full;
+            }
+            .badge-blue {
+                @apply bg-blue-100 text-blue-800;
+            }
+            .badge-green {
+                @apply bg-green-100 text-green-800;
+            }
+            .badge-yellow {
+                @apply bg-yellow-100 text-yellow-800;
+            }
+            .badge-red {
+                @apply bg-red-100 text-red-800;
+            }
+            .nav-item {
+                @apply flex items-center gap-2 px-4 py-3 rounded-md transition-all-300 cursor-pointer;
+            }
+            .nav-item-active {
+                @apply bg-primary/10 text-primary font-medium;
+            }
+            .nav-item-inactive {
+                @apply hover:bg-gray-100;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans">
+    <!-- App Container -->
+    <div id="app" class="min-h-screen flex flex-col">
+        <!-- Header -->
+        <header class="bg-white shadow-sm border-b border-gray-200">
+            <div class="container mx-auto px-4 py-3 flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i class="fa fa-graduation-cap text-primary text-2xl"></i>
+                    <h1 class="text-xl font-bold text-gray-800">ToIvy Education Student Data Archive</h1>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button id="importBtn" class="btn btn-outline flex items-center gap-1">
+                        <i class="fa fa-upload"></i>
+                        <span>Import</span>
+                    </button>
+                    <button id="exportBtn" class="btn btn-primary flex items-center gap-1">
+                        <i class="fa fa-download"></i>
+                        <span>Export</span>
+                    </button>
+                    <input type="file" id="importFile" accept=".json" class="hidden">
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex-1 flex">
+            <!-- Left Sidebar - Navigation -->
+            <aside class="w-64 bg-white border-r border-gray-200 flex flex-col">
+                <!-- Breadcrumb -->
+                <div class="p-4 border-b border-gray-200 bg-gray-50">
+                    <nav class="flex" aria-label="Breadcrumb">
+                        <ol class="inline-flex items-center space-x-1 md:space-x-3">
+                            <li id="breadcrumb-year" class="inline-flex items-center">
+                                <span class="inline-flex items-center text-sm font-medium text-gray-700 hover:text-primary">
+                                    <i class="fa fa-calendar mr-2"></i>
+                                    <span id="current-year">Select Year</span>
+                                </span>
+                            </li>
+                            <li>
+                                <div class="flex items-center">
+                                    <i class="fa fa-chevron-right text-gray-400 mx-1 text-xs"></i>
+                                    <span id="breadcrumb-class" class="inline-flex items-center text-sm font-medium text-gray-700 hover:text-primary">
+                                        <i class="fa fa-users mr-2"></i>
+                                        <span id="current-class">Select Class</span>
+                                    </span>
+                                </div>
+                            </li>
+                            <li>
+                                <div class="flex items-center">
+                                    <i class="fa fa-chevron-right text-gray-400 mx-1 text-xs"></i>
+                                    <span id="breadcrumb-student" class="inline-flex items-center text-sm font-medium text-gray-700 hover:text-primary">
+                                        <i class="fa fa-user mr-2"></i>
+                                        <span id="current-student">Select Student</span>
+                                    </span>
+                                </div>
+                            </li>
+                        </ol>
+                    </nav>
+                </div>
+
+                <!-- Navigation Content -->
+                <div id="nav-content" class="flex-1 overflow-y-auto p-4">
+                    <!-- Year List (Default View) -->
+                    <div id="year-list" class="space-y-2">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-lg font-semibold text-gray-800">Academic Years</h2>
+                            <button id="add-year-btn" class="btn btn-outline p-1.5">
+                                <i class="fa fa-plus text-primary"></i>
+                            </button>
+                        </div>
+                        <div id="years-container" class="space-y-1">
+                            <!-- Years will be dynamically added here -->
+                            <div class="text-center text-gray-500 py-8">
+                                <i class="fa fa-folder-open-o text-3xl mb-2"></i>
+                                <p>No academic years added yet</p>
+                                <p class="text-xs mt-1">Click the + button to add your first year</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Class List (Shown when a year is selected) -->
+                    <div id="class-list" class="space-y-2 hidden">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-lg font-semibold text-gray-800">Classes</h2>
+                            <button id="add-class-btn" class="btn btn-outline p-1.5">
+                                <i class="fa fa-plus text-primary"></i>
+                            </button>
+                        </div>
+                        <div id="classes-container" class="space-y-1">
+                            <!-- Classes will be dynamically added here -->
+                        </div>
+                    </div>
+
+                    <!-- Student List (Shown when a class is selected) -->
+                    <div id="student-list" class="space-y-2 hidden">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 class="text-lg font-semibold text-gray-800">Students</h2>
+                            <button id="add-student-btn" class="btn btn-outline p-1.5">
+                                <i class="fa fa-plus text-primary"></i>
+                            </button>
+                        </div>
+                        <div id="students-container" class="space-y-1">
+                            <!-- Students will be dynamically added here -->
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Right Content Area -->
+            <div id="content-area" class="flex-1 overflow-y-auto p-6">
+                <!-- Welcome Screen -->
+                <div id="welcome-screen" class="h-full flex flex-col items-center justify-center text-center">
+                    <div class="max-w-md">
+                        <i class="fa fa-graduation-cap text-primary text-6xl mb-6"></i>
+                        <h2 class="text-2xl font-bold text-gray-800 mb-2">Welcome to ToIvy Education Student Data Archive</h2>
+                        <p class="text-gray-600 mb-6">Select an academic year, class, and student to view and manage student records.</p>
+                        <button id="welcome-add-year-btn" class="btn btn-primary">
+                            <i class="fa fa-plus mr-2"></i>
+                            Add Academic Year
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Year Details (Shown when a year is selected but no class) -->
+                <div id="year-details" class="hidden">
+                    <div class="card mb-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 id="year-title" class="text-2xl font-bold text-gray-800"></h2>
+                            <div class="flex gap-2">
+                                <button id="edit-year-btn" class="btn btn-outline">
+                                    <i class="fa fa-pencil mr-1"></i>
+                                    Edit
+                                </button>
+                                <button id="delete-year-btn" class="btn btn-danger">
+                                    <i class="fa fa-trash mr-1"></i>
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <h3 class="text-sm font-medium text-gray-500 mb-1">Class Count</h3>
+                                <p id="year-class-count" class="text-lg font-semibold"></p>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-medium text-gray-500 mb-1">Student Count</h3>
+                                <p id="year-student-count" class="text-lg font-semibold"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Classes in this Academic Year</h3>
+                        <div id="year-classes-list" class="space-y-3">
+                            <!-- Classes will be dynamically added here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Class Details (Shown when a class is selected but no student) -->
+                <div id="class-details" class="hidden">
+                    <div class="card mb-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 id="class-title" class="text-2xl font-bold text-gray-800"></h2>
+                            <div class="flex gap-2">
+                                <button id="edit-class-btn" class="btn btn-outline">
+                                    <i class="fa fa-pencil mr-1"></i>
+                                    Edit
+                                </button>
+                                <button id="delete-class-btn" class="btn btn-danger">
+                                    <i class="fa fa-trash mr-1"></i>
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <h3 class="text-sm font-medium text-gray-500 mb-1">Academic Year</h3>
+                                <p id="class-year" class="text-lg font-semibold"></p>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-medium text-gray-500 mb-1">Student Count</h3>
+                                <p id="class-student-count" class="text-lg font-semibold"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3 class="text-lg font-semibold text-gray-800 mb-4">Students in this Class</h3>
+                        <div id="class-students-list" class="space-y-3">
+                            <!-- Students will be dynamically added here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Student Details (Shown when a student is selected) -->
+                <div id="student-details" class="hidden">
+                    <!-- Student Info Card -->
+                    <div class="card mb-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h2 id="student-name" class="text-2xl font-bold text-gray-800"></h2>
+                            <div class="flex gap-2">
+                                <button id="edit-student-btn" class="btn btn-outline">
+                                    <i class="fa fa-pencil mr-1"></i>
+                                    Edit
+                                </button>
+                                <button id="delete-student-btn" class="btn btn-danger">
+                                    <i class="fa fa-trash mr-1"></i>
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <div class="mb-3">
+                                    <h3 class="text-sm font-medium text-gray-500 mb-1">Gender</h3>
+                                    <p id="student-gender" class="text-lg"></p>
+                                </div>
+                                <div class="mb-3">
+                                    <h3 class="text-sm font-medium text-gray-500 mb-1">Parent Contact</h3>
+                                    <p id="student-contact" class="text-lg"></p>
+                                </div>
+                                <div>
+                                    <h3 class="text-sm font-medium text-gray-500 mb-1">Additional Information</h3>
+                                    <p id="student-info" class="text-lg"></p>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="mb-3">
+                                    <h3 class="text-sm font-medium text-gray-500 mb-1">Academic Year</h3>
+                                    <p id="student-year" class="text-lg"></p>
+                                </div>
+                                <div class="mb-3">
+                                    <h3 class="text-sm font-medium text-gray-500 mb-1">Class</h3>
+                                    <p id="student-class" class="text-lg"></p>
+                                </div>
+                                <div>
+                                    <h3 class="text-sm font-medium text-gray-500 mb-1">School</h3>
+                                    <p id="student-school" class="text-lg"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Student Reports -->
+                    <div class="card mb-6">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-gray-800">Academic Reports</h3>
+                            <div class="flex gap-2">
+                                <button id="add-report-btn" class="btn btn-outline">
+                                    <i class="fa fa-plus mr-1"></i>
+                                    Add Report
+                                </button>
+                                <button id="generate-pdf-btn" class="btn btn-primary">
+                                    <i class="fa fa-file-pdf-o mr-1"></i>
+                                    Generate PDF
+                                </button>
+                            </div>
+                        </div>
+                        <div id="reports-container" class="space-y-4">
+                            <!-- Reports will be dynamically added here -->
+                            <div id="no-reports-message" class="text-center text-gray-500 py-8">
+                                <i class="fa fa-file-text-o text-3xl mb-2"></i>
+                                <p>No academic reports added yet</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Student Penalties -->
+                    <div class="card">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg font-semibold text-gray-800">Disciplinary Records</h3>
+                            <button id="add-penalty-btn" class="btn btn-outline">
+                                <i class="fa fa-plus mr-1"></i>
+                                Add Record
+                            </button>
+                        </div>
+                        <div id="penalties-container" class="space-y-4">
+                            <!-- Penalties will be dynamically added here -->
+                            <div id="no-penalties-message" class="text-center text-gray-500 py-8">
+                                <i class="fa fa-exclamation-circle text-3xl mb-2"></i>
+                                <p>No disciplinary records added yet</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Overlay -->
+    <div id="modal-overlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <!-- Modal Content -->
+        <div id="modal-content" class="bg-white rounded-lg shadow-lg w-full max-w-md mx-4 overflow-hidden">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                <h3 id="modal-title" class="text-lg font-semibold text-gray-800"></h3>
+                <button id="modal-close" class="text-gray-400 hover:text-gray-500">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+            
+            <!-- Modal Body -->
+            <div id="modal-body" class="px-6 py-4">
+                <!-- Form content will be dynamically added here -->
+            </div>
+            
+            <!-- Modal Footer -->
+            <div id="modal-footer" class="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+                <button id="modal-cancel" class="btn btn-outline">Cancel</button>
+                <button id="modal-save" class="btn btn-primary">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirm-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-sm mx-4 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 id="confirm-title" class="text-lg font-semibold text-gray-800">Confirm Action</h3>
+            </div>
+            <div class="px-6 py-4">
+                <p id="confirm-message" class="text-gray-700"></p>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+                <button id="confirm-cancel" class="btn btn-outline">Cancel</button>
+                <button id="confirm-ok" class="btn btn-danger">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-4 right-4 bg-white rounded-lg shadow-lg px-6 py-3 flex items-center gap-3 transform translate-y-20 opacity-0 transition-all duration-300 z-50">
+        <div id="toast-icon" class="text-lg"></div>
+        <p id="toast-message" class="text-gray-800"></p>
+    </div>
+
+    <script>
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            // Application state
+            const appState = {
+                data: {
+                    schoolYears: []
+                },
+                currentYear: null,
+                currentClass: null,
+                currentStudent: null,
+                nextId: {
+                    year: 1,
+                    class: 1,
+                    student: 1,
+                    report: 1,
+                    penalty: 1
+                }
+            };
+
+            // DOM Elements
+            const elements = {
+                // Navigation
+                yearList: document.getElementById('year-list'),
+                classList: document.getElementById('class-list'),
+                studentList: document.getElementById('student-list'),
+                yearsContainer: document.getElementById('years-container'),
+                classesContainer: document.getElementById('classes-container'),
+                studentsContainer: document.getElementById('students-container'),
+                
+                // Content Areas
+                welcomeScreen: document.getElementById('welcome-screen'),
+                yearDetails: document.getElementById('year-details'),
+                classDetails: document.getElementById('class-details'),
+                studentDetails: document.getElementById('student-details'),
+                
+                // Breadcrumb
+                currentYear: document.getElementById('current-year'),
+                currentClass: document.getElementById('current-class'),
+                currentStudent: document.getElementById('current-student'),
+                breadcrumbYear: document.getElementById('breadcrumb-year'),
+                breadcrumbClass: document.getElementById('breadcrumb-class'),
+                breadcrumbStudent: document.getElementById('breadcrumb-student'),
+                
+                // Modals
+                modalOverlay: document.getElementById('modal-overlay'),
+                modalContent: document.getElementById('modal-content'),
+                modalTitle: document.getElementById('modal-title'),
+                modalBody: document.getElementById('modal-body'),
+                modalFooter: document.getElementById('modal-footer'),
+                modalClose: document.getElementById('modal-close'),
+                modalCancel: document.getElementById('modal-cancel'),
+                modalSave: document.getElementById('modal-save'),
+                
+                // Confirm Modal
+                confirmModal: document.getElementById('confirm-modal'),
+                confirmTitle: document.getElementById('confirm-title'),
+                confirmMessage: document.getElementById('confirm-message'),
+                confirmCancel: document.getElementById('confirm-cancel'),
+                confirmOk: document.getElementById('confirm-ok'),
+                
+                // Toast Notification
+                toast: document.getElementById('toast'),
+                toastIcon: document.getElementById('toast-icon'),
+                toastMessage: document.getElementById('toast-message'),
+                
+                // Import/Export
+                importBtn: document.getElementById('importBtn'),
+                exportBtn: document.getElementById('exportBtn'),
+                importFile: document.getElementById('importFile')
+            };
+
+            // Initialize the application
+            function init() {
+                // Load data from localStorage if available
+                loadData();
+                
+                // Render initial state
+                renderYearList();
+                
+                // Set up event listeners
+                setupEventListeners();
+                
+                // Make class list sortable
+                makeClassListSortable();
+            }
+
+            // Load data from localStorage
+            function loadData() {
+                const savedData = localStorage.getItem('toivyStudentData');
+                if (savedData) {
+                    try {
+                        const parsedData = JSON.parse(savedData);
+                        appState.data = parsedData.data || { schoolYears: [] };
+                        appState.nextId = parsedData.nextId || {
+                            year: 1,
+                            class: 1,
+                            student: 1,
+                            report: 1,
+                            penalty: 1
+                        };
+                    } catch (error) {
+                        console.error('Error loading data:', error);
+                        showToast('error', 'Failed to load data. Using empty dataset.');
+                    }
+                }
+            }
+
+            // Save data to localStorage
+            function saveData() {
+                const dataToSave = {
+                    data: appState.data,
+                    nextId: appState.nextId
+                };
+                localStorage.setItem('toivyStudentData', JSON.stringify(dataToSave));
+            }
+
+            // Setup event listeners
+            function setupEventListeners() {
+                // Add Year buttons
+                document.getElementById('add-year-btn').addEventListener('click', () => showAddYearModal());
+                document.getElementById('welcome-add-year-btn').addEventListener('click', () => showAddYearModal());
+                
+                // Add Class button
+                document.getElementById('add-class-btn').addEventListener('click', () => showAddClassModal());
+                
+                // Add Student button
+                document.getElementById('add-student-btn').addEventListener('click', () => showAddStudentModal());
+                
+                // Add Report button
+                document.getElementById('add-report-btn').addEventListener('click', () => showAddReportModal());
+                
+                // Add Penalty button
+                document.getElementById('add-penalty-btn').addEventListener('click', () => showAddPenaltyModal());
+                
+                // Generate PDF button
+                document.getElementById('generate-pdf-btn').addEventListener('click', generateStudentPDF);
+                
+                // Edit Year button
+                document.getElementById('edit-year-btn').addEventListener('click', () => showEditYearModal());
+                
+                // Delete Year button
+                document.getElementById('delete-year-btn').addEventListener('click', () => showDeleteYearConfirm());
+                
+                // Edit Class button
+                document.getElementById('edit-class-btn').addEventListener('click', () => showEditClassModal());
+                
+                // Delete Class button
+                document.getElementById('delete-class-btn').addEventListener('click', () => showDeleteClassConfirm());
+                
+                // Edit Student button
+                document.getElementById('edit-student-btn').addEventListener('click', () => showEditStudentModal());
+                
+                // Delete Student button
+                document.getElementById('delete-student-btn').addEventListener('click', () => showDeleteStudentConfirm());
+                
+                // Modal close buttons
+                elements.modalClose.addEventListener('click', hideModal);
+                elements.modalCancel.addEventListener('click', hideModal);
+                
+                // Confirm modal buttons
+                elements.confirmCancel.addEventListener('click', hideConfirmModal);
+                
+                // Breadcrumb navigation
+                elements.breadcrumbYear.addEventListener('click', navigateToYearList);
+                elements.breadcrumbClass.addEventListener('click', navigateToClassList);
+                
+                // Import/Export buttons
+                elements.importBtn.addEventListener('click', () => elements.importFile.click());
+                elements.exportBtn.addEventListener('click', exportData);
+                elements.importFile.addEventListener('change', handleFileImport);
+            }
+
+            // Render year list
+            function renderYearList() {
+                const { yearsContainer } = elements;
+                const { schoolYears } = appState.data;
+                
+                // Clear container
+                yearsContainer.innerHTML = '';
+                
+                if (schoolYears.length === 0) {
+                    yearsContainer.innerHTML = `
+                        <div class="text-center text-gray-500 py-8">
+                            <i class="fa fa-folder-open-o text-3xl mb-2"></i>
+                            <p>No academic years added yet</p>
+                            <p class="text-xs mt-1">Click the + button to add your first year</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Sort years in descending order (newest first)
+                const sortedYears = [...schoolYears].sort((a, b) => b.name.localeCompare(a.name));
+                
+                // Add years to container
+                sortedYears.forEach(year => {
+                    const yearElement = document.createElement('div');
+                    yearElement.className = 'nav-item nav-item-inactive';
+                    yearElement.dataset.yearId = year.id;
+                    yearElement.innerHTML = `
+                        <i class="fa fa-calendar"></i>
+                        <span>${year.name}</span>
+                        <span class="ml-auto badge badge-blue">${year.classes.length} classes</span>
+                    `;
+                    yearElement.addEventListener('click', () => selectYear(year.id));
+                    yearsContainer.appendChild(yearElement);
+                });
+            }
+
+            // Render class list for selected year
+            function renderClassList(yearId) {
+                const { classesContainer } = elements;
+                const year = appState.data.schoolYears.find(y => y.id === yearId);
+                
+                if (!year) return;
+                
+                // Clear container
+                classesContainer.innerHTML = '';
+                
+                if (year.classes.length === 0) {
+                    classesContainer.innerHTML = `
+                        <div class="text-center text-gray-500 py-8">
+                            <i class="fa fa-users text-3xl mb-2"></i>
+                            <p>No classes added yet</p>
+                            <p class="text-xs mt-1">Click the + button to add your first class</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Sort classes by order
+                const sortedClasses = [...year.classes].sort((a, b) => a.order - b.order);
+                
+                // Add classes to container
+                sortedClasses.forEach(classItem => {
+                    const classElement = document.createElement('div');
+                    classElement.className = 'nav-item nav-item-inactive sortable-item';
+                    classElement.dataset.classId = classItem.id;
+                    classElement.innerHTML = `
+                        <i class="fa fa-users"></i>
+                        <span>${classItem.name}</span>
+                        <span class="ml-auto badge badge-green">${classItem.students.length} students</span>
+                        <i class="fa fa-bars ml-2 text-gray-400 drag-handle"></i>
+                    `;
+                    classElement.addEventListener('click', () => selectClass(yearId, classItem.id));
+                    classesContainer.appendChild(classElement);
+                });
+                
+                // Reinitialize sortable after rendering
+                makeClassListSortable();
+            }
+
+            // Render student list for selected class
+            function renderStudentList(yearId, classId) {
+                const { studentsContainer } = elements;
+                const year = appState.data.schoolYears.find(y => y.id === yearId);
+                const classItem = year?.classes.find(c => c.id === classId);
+                
+                if (!classItem) return;
+                
+                // Clear container
+                studentsContainer.innerHTML = '';
+                
+                if (classItem.students.length === 0) {
+                    studentsContainer.innerHTML = `
+                        <div class="text-center text-gray-500 py-8">
+                            <i class="fa fa-user text-3xl mb-2"></i>
+                            <p>No students added yet</p>
+                            <p class="text-xs mt-1">Click the + button to add your first student</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Sort students by name
+                const sortedStudents = [...classItem.students].sort((a, b) => a.name.localeCompare(b.name));
+                
+                // Add students to container
+                sortedStudents.forEach(student => {
+                    const studentElement = document.createElement('div');
+                    studentElement.className = 'nav-item nav-item-inactive';
+                    studentElement.dataset.studentId = student.id;
+                    studentElement.innerHTML = `
+                        <i class="fa fa-user"></i>
+                        <span>${student.name}</span>
+                        <span class="ml-auto badge badge-yellow">${student.reports.length} reports</span>
+                    `;
+                    studentElement.addEventListener('click', () => selectStudent(yearId, classId, student.id));
+                    studentsContainer.appendChild(studentElement);
+                });
+            }
+
+            // Render year details
+            function renderYearDetails(yearId) {
+                const year = appState.data.schoolYears.find(y => y.id === yearId);
+                
+                if (!year) return;
+                
+                // Update title
+                document.getElementById('year-title').textContent = year.name;
+                
+                // Update stats
+                document.getElementById('year-class-count').textContent = year.classes.length;
+                
+                // Calculate total students
+                const totalStudents = year.classes.reduce((count, classItem) => count + classItem.students.length, 0);
+                document.getElementById('year-student-count').textContent = totalStudents;
+                
+                // Update classes list
+                const classesList = document.getElementById('year-classes-list');
+                classesList.innerHTML = '';
+                
+                if (year.classes.length === 0) {
+                    classesList.innerHTML = `
+                        <div class="text-center text-gray-500 py-4">
+                            <p>No classes added yet</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Sort classes by order
+                const sortedClasses = [...year.classes].sort((a, b) => a.order - b.order);
+                
+                // Add classes to list
+                sortedClasses.forEach(classItem => {
+                    const classElement = document.createElement('div');
+                    classElement.className = 'border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-all-300';
+                    classElement.innerHTML = `
+                        <div class="flex items-center justify-between">
+                            <h4 class="font-medium text-gray-800">${classItem.name}</h4>
+                            <span class="badge badge-green">${classItem.students.length} students</span>
+                        </div>
+                        <div class="mt-2 text-sm text-gray-500">
+                            <p>Order: ${classItem.order}</p>
+                        </div>
+                    `;
+                    classElement.addEventListener('click', () => selectClass(yearId, classItem.id));
+                    classesList.appendChild(classElement);
+                });
+            }
+
+            // Render class details
+            function renderClassDetails(yearId, classId) {
+                const year = appState.data.schoolYears.find(y => y.id === yearId);
+                const classItem = year?.classes.find(c => c.id === classId);
+                
+                if (!classItem) return;
+                
+                // Update title
+                document.getElementById('class-title').textContent = classItem.name;
+                
+                // Update year
+                document.getElementById('class-year').textContent = year.name;
+                
+                // Update student count
+                document.getElementById('class-student-count').textContent = classItem.students.length;
+                
+                // Update students list
+                const studentsList = document.getElementById('class-students-list');
+                studentsList.innerHTML = '';
+                
+                if (classItem.students.length === 0) {
+                    studentsList.innerHTML = `
+                        <div class="text-center text-gray-500 py-4">
+                            <p>No students added yet</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Sort students by name
+                const sortedStudents = [...classItem.students].sort((a, b) => a.name.localeCompare(b.name));
+                
+                // Add students to list
+                sortedStudents.forEach(student => {
+                    const studentElement = document.createElement('div');
+                    studentElement.className = 'border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-all-300';
+                    studentElement.innerHTML = `
+                        <div class="flex items-center justify-between">
+                            <h4 class="font-medium text-gray-800">${student.name}</h4>
+                            <span class="badge badge-blue">${student.gender}</span>
+                        </div>
+                        <div class="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                            <p class="text-gray-500">
+                                <i class="fa fa-phone mr-1"></i>
+                                ${student.parentContact || 'N/A'}
+                            </p>
+                            <p class="text-gray-500">
+                                <i class="fa fa-file-text-o mr-1"></i>
+                                ${student.reports.length} reports
+                            </p>
+                        </div>
+                    `;
+                    studentElement.addEventListener('click', () => selectStudent(yearId, classId, student.id));
+                    studentsList.appendChild(studentElement);
+                });
+            }
+
+            // Render student details
+            function renderStudentDetails(yearId, classId, studentId) {
+                const year = appState.data.schoolYears.find(y => y.id === yearId);
+                const classItem = year?.classes.find(c => c.id === classId);
+                const student = classItem?.students.find(s => s.id === studentId);
+                
+                if (!student) return;
+                
+                // Update basic info
+                document.getElementById('student-name').textContent = student.name;
+                document.getElementById('student-gender').textContent = student.gender;
+                document.getElementById('student-contact').textContent = student.parentContact || 'N/A';
+                document.getElementById('student-info').textContent = student.additionalInfo || 'N/A';
+                document.getElementById('student-year').textContent = year.name;
+                document.getElementById('student-class').textContent = classItem.name;
+                document.getElementById('student-school').textContent = student.school || 'N/A';
+                
+                // Update reports
+                renderReports(student.reports);
+                
+                // Update penalties
+                renderPenalties(student.penalties);
+            }
+
+            // Render student reports
+            function renderReports(reports) {
+                const reportsContainer = document.getElementById('reports-container');
+                const noReportsMessage = document.getElementById('no-reports-message');
+                
+                // Clear container except for no-reports message
+                while (reportsContainer.firstChild) {
+                    if (reportsContainer.firstChild === noReportsMessage) {
+                        reportsContainer.firstChild.nextSibling && reportsContainer.removeChild(reportsContainer.firstChild.nextSibling);
+                    } else {
+                        reportsContainer.removeChild(reportsContainer.firstChild);
+                    }
+                }
+                
+                if (reports.length === 0) {
+                    noReportsMessage.classList.remove('hidden');
+                    return;
+                }
+                
+                noReportsMessage.classList.add('hidden');
+                
+                // Sort reports by date (newest first)
+                const sortedReports = [...reports].sort((a, b) => new Date(b.date) - new Date(a.date));
+                
+                // Add reports to container
+                sortedReports.forEach(report => {
+                    const reportElement = document.createElement('div');
+                    reportElement.className = 'border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-all-300';
+                    reportElement.innerHTML = `
+                        <div class="flex items-center justify-between">
+                            <h4 class="font-medium text-gray-800">${report.subject}</h4>
+                            <div class="flex items-center gap-2">
+                                <span class="badge ${getGradeBadgeClass(report.grade)}">${report.grade}</span>
+                                <div class="flex gap-1">
+                                    <button class="text-gray-400 hover:text-primary edit-report-btn" data-report-id="${report.id}">
+                                        <i class="fa fa-pencil"></i>
+                                    </button>
+                                    <button class="text-gray-400 hover:text-red-500 delete-report-btn" data-report-id="${report.id}">
+                                        <i class="fa fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <p class="text-gray-600">${report.comments || 'No comments'}</p>
+                        </div>
+                        <div class="mt-2 text-sm text-gray-500">
+                            <p>Date: ${formatDate(report.date)}</p>
+                        </div>
+                    `;
+                    
+                    // Add event listeners
+                    reportElement.querySelector('.edit-report-btn').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        showEditReportModal(report.id);
+                    });
+                    
+                    reportElement.querySelector('.delete-report-btn').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        showDeleteReportConfirm(report.id);
+                    });
+                    
+                    reportsContainer.appendChild(reportElement);
+                });
+            }
+
+            // Render student penalties
+            function renderPenalties(penalties) {
+                const penaltiesContainer = document.getElementById('penalties-container');
+                const noPenaltiesMessage = document.getElementById('no-penalties-message');
+                
+                // Clear container except for no-penalties message
+                while (penaltiesContainer.firstChild) {
+                    if (penaltiesContainer.firstChild === noPenaltiesMessage) {
+                        penaltiesContainer.firstChild.nextSibling && penaltiesContainer.removeChild(penaltiesContainer.firstChild.nextSibling);
+                    } else {
+                        penaltiesContainer.removeChild(penaltiesContainer.firstChild);
+                    }
+                }
+                
+                if (penalties.length === 0) {
+                    noPenaltiesMessage.classList.remove('hidden');
+                    return;
+                }
+                
+                noPenaltiesMessage.classList.add('hidden');
+                
+                // Sort penalties by date (newest first)
+                const sortedPenalties = [...penalties].sort((a, b) => new Date(b.date) - new Date(a.date));
+                
+                // Add penalties to container
+                sortedPenalties.forEach(penalty => {
+                    const penaltyElement = document.createElement('div');
+                    penaltyElement.className = 'border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-all-300';
+                    penaltyElement.innerHTML = `
+                        <div class="flex items-center justify-between">
+                            <h4 class="font-medium text-gray-800">${penalty.reason}</h4>
+                            <div class="flex items-center gap-2">
+                                <span class="badge ${getStatusBadgeClass(penalty.status)}">${penalty.status}</span>
+                                <div class="flex gap-1">
+                                    <button class="text-gray-400 hover:text-primary edit-penalty-btn" data-penalty-id="${penalty.id}">
+                                        <i class="fa fa-pencil"></i>
+                                    </button>
+                                    <button class="text-gray-400 hover:text-red-500 delete-penalty-btn" data-penalty-id="${penalty.id}">
+                                        <i class="fa fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-sm text-gray-500">
+                            <p>Date: ${formatDate(penalty.date)}</p>
+                        </div>
+                    `;
+                    
+                    // Add event listeners
+                    penaltyElement.querySelector('.edit-penalty-btn').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        showEditPenaltyModal(penalty.id);
+                    });
+                    
+                    penaltyElement.querySelector('.delete-penalty-btn').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        showDeletePenaltyConfirm(penalty.id);
+                    });
+                    
+                    penaltiesContainer.appendChild(penaltyElement);
+                });
+            }
+
+            // Make class list sortable
+            function makeClassListSortable() {
+                const classesContainer = elements.classesContainer;
+                const sortableItems = classesContainer.querySelectorAll('.sortable-item');
+                
+                if (sortableItems.length === 0) return;
+                
+                let draggedItem = null;
+                
+                // Add event listeners to each sortable item
+                sortableItems.forEach(item => {
+                    item.addEventListener('dragstart', function() {
+                        draggedItem = this;
+                        setTimeout(() => this.classList.add('sortable-drag'), 0);
+                    });
+                    
+                    item.addEventListener('dragend', function() {
+                        this.classList.remove('sortable-drag');
+                        draggedItem = null;
+                        
+                        // Update class order in data
+                        updateClassOrder();
+                    });
+                    
+                    item.addEventListener('dragover', function(e) {
+                        e.preventDefault();
+                    });
+                    
+                    item.addEventListener('dragenter', function(e) {
+                        e.preventDefault();
+                        if (this !== draggedItem) {
+                            this.classList.add('sortable-ghost');
+                        }
+                    });
+                    
+                    item.addEventListener('dragleave', function() {
+                        this.classList.remove('sortable-ghost');
+                    });
+                    
+                    item.addEventListener('drop', function() {
+                        this.classList.remove('sortable-ghost');
+                        
+                        if (this !== draggedItem) {
+                            const currentPos = Array.from(classesContainer.children).indexOf(draggedItem);
+                            const newPos = Array.from(classesContainer.children).indexOf(this);
+                            
+                            if (currentPos < newPos) {
+                                classesContainer.insertBefore(draggedItem, this.nextSibling);
+                            } else {
+                                classesContainer.insertBefore(draggedItem, this);
+                            }
+                        }
+                    });
+                    
+                    // Make items draggable
+                    item.setAttribute('draggable', 'true');
+                });
+            }
+
+            // Update class order in data
+            function updateClassOrder() {
+                if (!appState.currentYear) return;
+                
+                const year = appState.data.schoolYears.find(y => y.id === appState.currentYear);
+                const classElements = elements.classesContainer.querySelectorAll('.sortable-item');
+                
+                classElements.forEach((element, index) => {
+                    const classId = element.dataset.classId;
+                    const classItem = year.classes.find(c => c.id === classId);
+                    if (classItem) {
+                        classItem.order = index + 1;
+                    }
+                });
+                
+                saveData();
+                
+                // If we're viewing year details, update it
+                if (elements.yearDetails.classList.contains('hidden') === false) {
+                    renderYearDetails(appState.currentYear);
+                }
+            }
+
+            // Select year
+            function selectYear(yearId) {
+                const year = appState.data.schoolYears.find(y => y.id === yearId);
+                
+                if (!year) return;
+                
+                // Update app state
+                appState.currentYear = yearId;
+                appState.currentClass = null;
+                appState.currentStudent = null;
+                
+                // Update breadcrumb
+                elements.currentYear.textContent = year.name;
+                elements.currentClass.textContent = 'Select Class';
+                elements.currentStudent.textContent = 'Select Student';
+                
+                // Update navigation
+                elements.yearList.classList.add('hidden');
+                elements.classList.classList.remove('hidden');
+                elements.studentList.classList.add('hidden');
+                
+                // Update content
+                elements.welcomeScreen.classList.add('hidden');
+                elements.yearDetails.classList.remove('hidden');
+                elements.classDetails.classList.add('hidden');
+                elements.studentDetails.classList.add('hidden');
+                
+                // Render class list and year details
+                renderClassList(yearId);
+                renderYearDetails(yearId);
+                
+                // Highlight active year in navigation
+                document.querySelectorAll('#years-container .nav-item').forEach(item => {
+                    item.classList.remove('nav-item-active');
+                    item.classList.add('nav-item-inactive');
+                });
+                
+                const activeYear = document.querySelector(`#years-container .nav-item[data-year-id="${yearId}"]`);
+                if (activeYear) {
+                    activeYear.classList.remove('nav-item-inactive');
+                    activeYear.classList.add('nav-item-active');
+                }
+            }
+
+            // Select class
+            function selectClass(yearId, classId) {
+                const year = appState.data.schoolYears.find(y => y.id === yearId);
+                const classItem = year?.classes.find(c => c.id === classId);
+                
+                if (!classItem) return;
+                
+                // Update app state
+                appState.currentYear = yearId;
+                appState.currentClass = classId;
+                appState.currentStudent = null;
+                
+                // Update breadcrumb
+                elements.currentYear.textContent = year.name;
+                elements.currentClass.textContent = classItem.name;
+                elements.currentStudent.textContent = 'Select Student';
+                
+                // Update navigation
+                elements.yearList.classList.add('hidden');
+                elements.classList.classList.add('hidden');
+                elements.studentList.classList.remove('hidden');
+                
+                // Update content
+                elements.welcomeScreen.classList.add('hidden');
+                elements.yearDetails.classList.add('hidden');
+                elements.classDetails.classList.remove('hidden');
+                elements.studentDetails.classList.add('hidden');
+                
+                // Render student list and class details
+                renderStudentList(yearId, classId);
+                renderClassDetails(yearId, classId);
+                
+                // Highlight active class in navigation
+                document.querySelectorAll('#classes-container .nav-item').forEach(item => {
+                    item.classList.remove('nav-item-active');
+                    item.classList.add('nav-item-inactive');
+                });
+                
+                const activeClass = document.querySelector(`#classes-container .nav-item[data-class-id="${classId}"]`);
+                if (activeClass) {
+                    activeClass.classList.remove('nav-item-inactive');
+                    activeClass.classList.add('nav-item-active');
+                }
+            }
+
+            // Select student
+            function selectStudent(yearId, classId, studentId) {
+                const year = appState.data.schoolYears.find(y => y.id === yearId);
+                const classItem = year?.classes.find(c => c.id === classId);
+                const student = classItem?.students.find(s => s.id === studentId);
+                
+                if (!student) return;
+                
+                // Update app state
+                appState.currentYear = yearId;
+                appState.currentClass = classId;
+                appState.currentStudent = studentId;
+                
+                // Update breadcrumb
+                elements.currentYear.textContent = year.name;
+                elements.currentClass.textContent = classItem.name;
+                elements.currentStudent.textContent = student.name;
+                
+                // Update content
+                elements.welcomeScreen.classList.add('hidden');
+                elements.yearDetails.classList.add('hidden');
+                elements.classDetails.classList.add('hidden');
+                elements.studentDetails.classList.remove('hidden');
+                
+                // Render student details
+                renderStudentDetails(yearId, classId, studentId);
+                
+                // Highlight active student in navigation
+                document.querySelectorAll('#students-container .nav-item').forEach(item => {
+                    item.classList.remove('nav-item-active');
+                    item.classList.add('nav-item-inactive');
+                });
+                
+                const activeStudent = document.querySelector(`#students-container .nav-item[data-student-id="${studentId}"]`);
+                if (activeStudent) {
+                    activeStudent.classList.remove('nav-item-inactive');
+                    activeStudent.classList.add('nav-item-active');
+                }
+            }
+
+            // Navigate to year list
+            function navigateToYearList() {
+                // Update app state
+                appState.currentYear = null;
+                appState.currentClass = null;
+                appState.currentStudent = null;
+                
+                // Update breadcrumb
+                elements.currentYear.textContent = 'Select Year';
+                elements.currentClass.textContent = 'Select Class';
+                elements.currentStudent.textContent = 'Select Student';
+                
+                // Update navigation
+                elements.yearList.classList.remove('hidden');
+                elements.classList.classList.add('hidden');
+                elements.studentList.classList.add('hidden');
+                
+                // Update content
+                elements.welcomeScreen.classList.remove('hidden');
+                elements.yearDetails.classList.add('hidden');
+                elements.classDetails.classList.add('hidden');
+                elements.studentDetails.classList.add('hidden');
+                
+                // Remove active highlights
+                document.querySelectorAll('.nav-item').forEach(item => {
+                    item.classList.remove('nav-item-active');
+                    item.classList.add('nav-item-inactive');
+                });
+            }
+
+            // Navigate to class list
+            function navigateToClassList() {
+                if (!appState.currentYear) return;
+                
+                const year = appState.data.schoolYears.find(y => y.id === appState.currentYear);
+                
+                // Update app state
+                appState.currentClass = null;
+                appState.currentStudent = null;
+                
+                // Update breadcrumb
+                elements.currentClass.textContent = 'Select Class';
+                elements.currentStudent.textContent = 'Select Student';
+                
+                // Update navigation
+                elements.yearList.classList.add('hidden');
+                elements.classList.classList.remove('hidden');
+                elements.studentList.classList.add('hidden');
+                
+                // Update content
+                elements.welcomeScreen.classList.add('hidden');
+                elements.yearDetails.classList.remove('hidden');
+                elements.classDetails.classList.add('hidden');
+                elements.studentDetails.classList.add('hidden');
+                
+                // Remove active highlights from classes and students
+                document.querySelectorAll('#classes-container .nav-item, #students-container .nav-item').forEach(item => {
+                    item.classList.remove('nav-item-active');
+                    item.classList.add('nav-item-inactive');
+                });
+            }
+
+            // Show add year modal
+            function showAddYearModal() {
+                elements.modalTitle.textContent = 'Add Academic Year';
+                elements.modalBody.innerHTML = `
+                    <div class="space-y-4">
+                        <div>
+                            <label for="year-name" class="block text-sm font-medium text-gray-700 mb-1">Year Name</label>
+                            <input type="text" id="year-name" class="w-full px-3 py-2 border border-gray-300 rounded-md form-input-focus" placeholder="e.g., 2023-2024" required>
+                        </div>
+                    </div>
+                `;
+                
+                elements.modalSave.onclick = function() {
+                    const yearName = document.getElementById('year-name').value.trim();
+                    
+                    if (!yearName) {
+                        showToast('error', 'Please enter a year name');
+                        return;
+                    }
+                    
+                    // Check if year already exists
+                    const yearExists = appState.data.schoolYears.some(year => year.name === yearName);
+                    if (yearExists) {
+                        showToast('error', 'A year with this name already exists');
+                        return;
+                    }
+                    
+                    // Create new year
+                    const newYear = {
+                        id: `year-${appState.nextId.year++}`,
+                        name: yearName,
+                        classes: []
+                    };
+                    
+                    // Add to data
+                    appState.data.schoolYears.push(newYear);
+                    
+                    // Save data
+                    saveData();
+                    
+                    // Update UI
+                    renderYearList();
+                    
+                    // Hide modal
+                    hideModal();
+                    
+                    // Show toast
+                    showToast('success', 'Academic year added successfully');
+                };
+                
+                elements.modalOverlay.classList.remove('hidden');
+            }
+
+            // Show edit year modal
+            function showEditYearModal() {
+                if (!appState.currentYear) return;
+                
+                const year = appState.data.schoolYears.find(y => y.id === appState.currentYear);
+                
+                elements.modalTitle.textContent = 'Edit Academic Year';
+                elements.modalBody.innerHTML = `
+                    <div class="space-y-4">
+                        <div>
+                            <label for="year-name" class="block text-sm font-medium text-gray-700 mb-1">Year Name</label>
+                            <input type="text" id="year-name" class="w-full px-3 py-2 border border-gray-300 rounded-md form-input-focus" value="${year.name}" required>
+                        </div>
+                    </div>
+                `;
+                
+                elements.modalSave.onclick = function() {
+                    const yearName = document.getElementById('year-name').value.trim();
+                    
+                    if (!yearName) {
+                        showToast('error', 'Please enter a year name');
+                        return;
+                    }
+                    
+                    // Check if year name already exists (excluding current year)
+                    const yearExists = appState.data.schoolYears.some(y => y.name === yearName && y.id !== year.id);
+                    if (yearExists) {
+                        showToast('error', 'A year with this name already exists');
+                        return;
+                    }
+                    
+                    // Update year
+                    year.name = yearName;
+                    
+                    // Save data
+                    saveData();
+                    
+                    // Update UI
+                    renderYearList();
+                    renderYearDetails(appState.currentYear);
+                    
+                    // Update breadcrumb
+                    elements.currentYear.textContent = year.name;
+                    
+                    // Hide modal
+                    hideModal();
+                    
+                    // Show toast
+                    showToast('success', 'Academic year updated successfully');
+                };
+                
+                elements.modalOverlay.classList.remove('hidden');
+            }
+
+            // Show delete year confirmation
+            function showDeleteYearConfirm() {
+                if (!appState.currentYear) return;
+                
+                const year = appState.data.schoolYears.find(y => y.id === appState.currentYear);
+                
+                elements.confirmTitle.textContent = 'Delete Academic Year';
+                elements.confirmMessage.textContent = `Are you sure you want to delete "${year.name}"? This will also delete all classes and students in this year. This action cannot be undone.`;
+                
+                elements.confirmOk.onclick = function() {
+                    // Delete year
+                    appState.data.schoolYears = appState.data.schoolYears.filter(y => y.id !== year.id);
+                    
+                    // Save data
+                    saveData();
+                    
+                    // Navigate back to year list
+                    navigateToYearList();
+                    
+                    // Update UI
+                    renderYearList();
+                    
+                    // Hide confirm modal
+                    hideConfirmModal();
+                    
+                    // Show toast
+                    showToast('success', 'Academic year deleted successfully');
+                };
+                
+                elements.confirmModal.classList.remove('hidden');
+            }
+
+            // Show add class modal
+            function showAddClassModal() {
+                if (!appState.currentYear) return;
+                
+                elements.modalTitle.textContent = 'Add Class';
+                elements.modalBody.innerHTML = `
+                    <div class="space-y-4">
+                        <div>
+                            <label for="class-name" class="block text-sm font-medium text-gray-700 mb-1">Class Name</label>
+                            <input type="text" id="class-name" class="w-full px-3 py-2 border border-gray-300 rounded-md form-input-focus" placeholder="e.g., Class A" required>
+                        </div>
+                    </div>
+                `;
+                
+                elements.modalSave.onclick = function() {
+                    const className = document.getElementById('class-name').value.trim();
+                    
+                    if (!className) {
+                        showToast('error', 'Please enter a class name');
+                        return;
+                    }
+                    
+                    const year = appState.data.schoolYears.find(y => y.id === appState.currentYear);
+                    
+                    // Check if class already exists in this year
+                    const classExists = year.classes.some(c => c.name === className);
+                    if (classExists) {
+                        showToast('error', 'A class with this name already exists in this year');
+                        return;
+                    }
+                    
+                    // Create new class
+                    const newClass = {
+                        id: `class-${appState.nextId.class++}`,
+                        name: className,
+                        order: year.classes.length + 1,
+                        students: []
+                    };
+                    
+                    // Add to data
+                    year.classes.push(newClass);
+                    
+                    // Save data
+                    saveData();
+                    
+                    // Update UI
+                    renderClassList(appState.currentYear);
+                    renderYearDetails(appState.currentYear);
+                    
+                    // Hide modal
+                    hideModal();
+                    
+                    // Show toast
+                    showToast('success', 'Class added successfully');
+                };
+                
+                elements.modalOverlay.classList.remove('hidden');
+            }
+
+            // Show edit class modal
+            function showEditClassModal() {
+                if (!appState.currentYear || !appState.currentClass) return;
+                
+                const year = appState.data.schoolYears.find(y => y.id === appState.currentYear);
+                const classItem = year?.classes.find(c => c.id === appState.currentClass);
+                
+                elements.modalTitle.textContent = 'Edit Class';
+                elements.modalBody.innerHTML = `
+                    <div class="space-y-4">
+                        <div>
+                            <label for="class-name" class="block text-sm font-medium text-gray-700 mb-1">Class Name</label>
+                            <input type="text" id="class-name" class="w-full px-3 py-2 border border-gray-300 rounded-md form-input-focus" value="${classItem.name}" required>
+                        </div>
+                    </div>
+                `;
+                
+                elements.modalSave.onclick = function() {
+                    const className = document.getElementById('class-name').value.trim();
+                    
+                    if (!className) {
+                        showToast('error', 'Please enter a class name');
+                        return;
+                    }
+                    
+                    // Check if class name already exists (excluding current class)
+                    const classExists = year.classes.some(c => c.name === className && c.id !== classItem.id);
+                    if (classExists) {
+                        showToast('error', 'A class with this name already exists in this year');
+                        return;
+                    }
+                    
+                    // Update class
+                    classItem.name = className;
+                    
+                    // Save data
+                    saveData();
+                    
+                    // Update UI
+                    renderClassList(appState.currentYear);
+                    renderClassDetails(appState.currentYear, appState.currentClass);
+                    
+                    // Update breadcrumb
+                    elements.currentClass.textContent = classItem.name;
+                    
+                    // Hide modal
+                    hideModal();
+                    
+                    // Show toast
+                    showToast('success', 'Class updated successfully');
+                };
+                
+                elements.modalOverlay.classList.remove('hidden');
+            }
+
+            // Show delete class confirmation
+            function showDeleteClassConfirm() {
+                if (!appState.currentYear || !appState.currentClass) return;
+                
+                const year = appState.data.schoolYears.find(y => y.id === appState.currentYear);
+                const classItem = year?.classes.find(c => c.id === appState.currentClass);
+                
+                elements.confirmTitle.textContent = 'Delete Class';
+                elements.confirmMessage.textContent = `Are you sure you want to delete "${classItem.name}"? This will also delete all students in this class. This action cannot be undone.`;
+                
+                elements.confirmOk.onclick = function() {
+                    // Delete class
+                    year.classes = year.classes.filter(c => c.id !== classItem.id);
+                    
+                    // Save data
+                    saveData();
+                    
+                    // Navigate back to class list
+                    navigateToClassList();
+                    
+                    // Update UI
+                    renderClassList(appState.currentYear);
+                    renderYearDetails(appState.currentYear);
+                    
+                    // Hide confirm modal
+                    hideConfirmModal();
+                    
+                    // Show toast
+                    showToast('success', 'Class deleted successfully');
+                };
+                
+                elements.confirmModal.classList.remove('hidden');
+            }
+
+            // Show add student modal
+            function showAddStudentModal() {
+                if (!appState.currentYear || !appState.currentClass) return;
+                
+                elements.modalTitle.textContent = 'Add Student';
+                elements.modalBody.innerHTML = `
+                    <div class="space-y-4">
+                        <div>
+                            <label for="student-name" class="block text-sm font-medium text-gray-700 mb-1">Student Name</label>
+                            <input type="text" id="student-name" class="w-full px-3 py-2 border border-gray-300 rounded-md form-input-focus" placeholder="e.g., John Doe" required>
+                        </div>
+                        <div>
+                            <label for="student-gender" class="block text-sm font-medium text-gray-700 mb-1">Gender</label>
+                            <select id="student-gender" class="w-full px-3 py-2 border border-gray-300 rounded-md form-input-focus" required>
+                                <option value="">Select Gender</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="student-school" class="block text-sm font-medium text-gray-700 mb-1">School</label>
+                            <input type="text" id="student-school" class="w-full px-3 py-2 border border-gray-300 rounded-md form-input-focus" placeholder="e.g., ToIvy International School">
+                        </div>
+                        <div>
+                            <label for="student-contact" class="block text-sm font-medium text-gray-700 mb-1">Parent Contact</label>
+                            <input type="text" id="student-contact" class="w-full px-3 py-2 border border-gray-300 rounded-md form-input-focus" placeholder="e.g., 123-456-7890">
+                        </div>
+                        <div>
+                            <label for="student-info" class="block text-sm font-medium text-gray-700 mb-1">Additional Information</label>
+                            <textarea id="student-info" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md form-input-focus" placeholder="e.g., Allergic to peanuts"></textarea>
+                        </div>
+                    </div>
+                `;
+                
+                elements.modalSave.onclick = function() {
+                    const studentName = document.getElementById('student-name').value.trim();
+                    const studentGender = document.getElementById('student-gender').value;
+                    const studentSchool = document.getElementById('student-school').value.trim();
+                    const studentContact = document.getElementById('student-contact').value.trim();
+                    const studentInfo = document.getElementById('student-info').value.trim();
+                    
+                    if (!studentName) {
+                        showToast('error', 'Please enter a student name');
+                        return;
+                    }
+                    
+                    if (!studentGender) {
+                        showToast('error', 'Please select a gender');
+                        return;
+                    }
+                    
+                    const year = appState.data.schoolYears.find(y => y.id === appState.currentYear);
+                    const classItem = year?.classes.find(c => c.id === appState.currentClass);
+                    
+                    // Create new student
+                    const newStudent = {
+                        id: `student-${appState.nextId.student++}`,
+                        name: studentName,
+                        gender: studentGender,
+                        school: studentSchool,
+                        parentContact: studentContact,
+                        additionalInfo: studentInfo,
+                        reports: [],
+                        penalties: []
+                    };
+                    
+                    // Add to data
+                    classItem.students.push(newStudent);
+                    
+                    // Save data
+                    saveData();
+                    
+                    // Update UI
+                    renderStudentList(appState.currentYear, appState.currentClass);
+                    renderClassDetails(appState.currentYear, appState.currentClass);
+                    
+                    // Hide modal
+                    hideModal();
+                    
+                    // Show toast
+                    showToast('success', 'Student added successfully');
+                };
+                
+                elements.modalOverlay.classList.remove('hidden');
+            }
+
+            // Show edit student modal
+            function showEditStudentModal() {
+                if (!appState.currentYear || !appState.currentClass || !appState.currentStudent) return;
+                
+                const year = appState.data.schoolYears.find(y => y.id === appState.currentYear);
+                const classItem = year?.classes.find(c => c.id === appState.currentClass);
+                const student = classItem?.students.find(s => s.id === appState.currentStudent);
+                
+                elements.modalTitle.textContent = 'Edit Student';
+                elements.modalBody.innerHTML = `
+                    <div class="space-y-4">
+                        <div>
+                            <label for="student-name" class="block text-sm font-medium text-gray-700 mb-1">Student Name</label>
+                            <input type="text" id="student-name" class="w-full px-3 py-2 border border-gray-300 rounded-md form-input-focus" value="${student.name}" required>
+                        </div>
+                        <div>
+                            <label for="student-gender" class="block text-sm font-medium text-gray-700 mb-1">Gender</label>
+                            <select id="student-gender" class="w-full px-3 py-2 border border-gray-300 rounded-md form-input-focus" required>
+                                <option value="">Select Gender</option>
+                                <option value="Male" ${student.gender === 'Male' ? 'selected' : ''}>Male</option>
+                                <option value="Female" ${student.gender === 'Female' ? 'selected' : ''}>Female</option>
+                                <option value="Other" ${student.gender === 'Other' ? 'selected' : ''}>Other</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="student-school" class="block text-sm font-medium text-gray-700 mb-1">School</label>
+                            <input type="text" id="student-school" class="w-full px-3 py-2 border border-gray-300 rounded-md form-input-focus" value="${student.school || ''}">
+                        </div>
+                        <div>
+                            <label for="student-contact" class="block text-sm font-medium text-gray-700 mb-1">Parent Contact</label>
+                            <input type="text" id="student-contact" class="w-full px-3 py-2 border border-gray-300 rounded-md form-input-focus" value="${student.parentContact || ''}">
+                        </div>
+                        <div>
+                            <label for="student-info" class="block text-sm font-medium text-gray-700 mb-1">Additional Information</label>
+                            <textarea id="student-info" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md form-input-focus">${student.additionalInfo || ''}</textarea>
+                        </div>
+                    </div>
+                `;
+                
+                elements.modalSave.onclick = function() {
+                    const studentName = document.getElementById('student-name').value.trim();
+                    const studentGender = document.getElementById('student-gender').value;
+                    const studentSchool = document.getElementById('student-school').value.trim();
+                    const studentContact = document.getElementById('student-contact').value.trim();
+                    const studentInfo = document.getElementById('student-info').value.trim();
+                    
+                    if (!studentName) {
+                        showToast('error', 'Please enter a student name');
+                        return;
+                    }
+                    
+                    if (!studentGender) {
+                        showToast('error', 'Please select a gender');
+                        return;
+                    }
+                    
+                    // Update student
+                    student.name = studentName;
+                    student.gender = studentGender;
+                    student.school = studentSchool;
+                    student.parentContact = studentContact;
+                    student.additionalInfo = studentInfo;
+                    
+                    // Save data
+                    saveData();
+                    
+                    // Update UI
+                    renderStudentList(appState.currentYear, appState.currentClass);
+                    renderStudentDetails(appState.currentYear, appState.currentClass, appState.currentStudent);
+                    
+                    // Update breadcrumb
+                    elements.currentStudent.textContent = student.name;
+                    
+                    // Hide modal
+                    hideModal();
+                    
+                    // Show toast
+                    showToast('success', 'Student updated successfully');
+                };
+                
+                elements.modalOverlay.classList.remove('hidden');
+            }
+
+            // Show delete student confirmation
+            function showDeleteStudentConfirm() {
+                if (!appState.currentYear || !appState.currentClass || !appState.currentStudent) return;
+                
+                const year = appState.data.schoolYears.find(y => y.id === appState.currentYear);
+                const classItem = year?.classes.find(c => c.id === appState.currentClass);
+                const student = classItem?.students.find(s => s.id === appState.currentStudent);
+                
+                elements.confirmTitle.textContent = 'Delete Student';
+                elements.confirmMessage.textContent = `Are you sure you want to delete "${student.name}"? This will also delete all reports and disciplinary records for this student. This action cannot be undone.`;
+                
+                elements.confirmOk.onclick = function() {
+                    // Delete student
+                    classItem.students = classItem.students.filter(s => s.id !== student.id);
+                    
+                    // Save data
+                    saveData();
+                    
+                    // Navigate back to student list
+                    appState.currentStudent = null;
+                    
+                    // Update UI
+                    renderStudentList(appState.currentYear, appState.currentClass);
+                    renderClassDetails(appState.currentYear, appState.currentClass);
+                    
+                    // Update content
+                    elements.studentDetails.classList.add('hidden');
+                    elements.classDetails.classList.remove('hidden');
+                    
+                    // Update breadcrumb
+                    elements.currentStudent.textContent = 'Select Student';
+                    
+                    // Hide confirm modal
+                    hideConfirmModal();
+                    
+                    // Show toast
+                    showToast('success', 'Student deleted successfully');
+                };
+                
+                elements.confirmModal.classList.remove('hidden');
+            }
+
+            // Show add report modal
+            function showAddReportModal() {
+                if (!appState.currentYear || !appState.currentClass || !appState.currentStudent) return;
+                
+                elements.modalTitle.textContent = 'Add Academic Report';
+                elements.modalBody.innerHTML = `
+                    <div class="space-y-4">
+                        <div>
+                            <label for="report-subject" class="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+                            <input type="text" id="report-subject" class="w-full px-3 py-2 border border-gray-300 rounded-md form-input-focus" placeholder="e.g., Mathematics" required>
+                        </div>
+                        <div>
+                            <label for="report-grade" class="block text-sm font-medium text-gray-700 mb-1">Grade</label>
+                            <select id="report-grade" class="w-full px-3 py-2 border border-gray-300 rounded-md form-input-focus" required>
+                                <option value="">Select Grade</option>
+                                <option value="A+">A+</option>
+                                <option value="A">A</option>
+                                <option value="A-">A-</option>
+                                <option value="B+">B+</option>
+                                <option value="B">B</option>
+                                <option value="B-">B-</option>
+                                <option value="C+">C+</option>
+                                <option value="C">C</option>
+                                <option value="C-">C-</option>
+                                <option value="D+">D+</option>
+                                <option value="D">D</option>
+                                <option value="D-">D-</option>
+                                <option value="F">F</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="report-date" class="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                            <input type="date" id="report-date" class="w-full px-3 py-2 border border-gray-300 rounded-md form-input-focus" required>
+                        </div>
+                        <div>
+                            <label for="report-comments" class="block text-sm font-medium text-gray-700 mb-1">Teacher Comments</label>
+                            <textarea id="report-comments" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md form-input-focus" placeholder="e.g., Excellent performance in class"></textarea>
+                        </div>
+                    </div>
+                `;
+                
+                // Set default date to today
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('report-date').value = today;
+                
+                elements.modalSave.onclick = function() {
+                    const reportSubject = document.getElementById('report-subject').value.trim();
+                    const reportGrade = document.getElementById('report-grade').value;
+                    const reportDate = document.getElementById('report-date').value;
+                    const reportComments = document.getElementById('report-comments').value.trim();
+                    
+                    if (!reportSubject) {
+                        showToast('error', 'Please enter a subject');
+                        return;
+                    }
+                    
+                    if (!reportGrade) {
+                        showToast('error', 'Please select a grade');
+                        return;
+                    }
+                    
+                    if (!reportDate) {
+                        showToast('error', 'Please select a date');
+                        return;
+                    }
+                    
+                    const year = appState.data.schoolYears.find(y => y.id === appState.currentYear);
+                    const classItem = year?.classes.find(c => c.id === appState.currentClass);
+                    const student = classItem?.students.find(s => s.id === appState.currentStudent);
+                    
+                    // Create new report
+                    const newReport = {
+                        id: `report-${appState.nextId.report++}`,
+                        subject: reportSubject,
+                        grade: reportGrade,
+                        date: reportDate,
+                        comments: reportComments
+                    };
+                    
+                    // Add to data
+                    student.reports.push(newReport);
+                    
+                    // Save data
+                    saveData();
+                    
+                    // Update UI
+                    renderReports(student.reports);
+                    
+                    // Hide modal
+                    hideModal();
+                    
+                    // Show toast
+                    showToast('success', 'Academic report added successfully');
+                };
+                
+                elements.modalOverlay.classList.remove('hidden');
+            }
+
+            // Show edit report modal
+            function showEditReportModal(reportId) {
+                if (!appState.currentYear || !appState.currentClass || !appState.currentStudent) return;
+                
+                const year = appState.data.schoolYears.find(y => y.id === appState.currentYear);
+                const classItem = year?.classes.find(c => c.id === appState.currentClass);
+                const student = classItem?.students.find(s => s.id === appState.currentStudent);
+                const report = student?.reports.find(r => r.id === reportId);
+                
+                if (!report) return;
+                
+                elements.modalTitle.textContent = 'Edit Academic Report';
+                elements.modalBody.innerHTML = `
+                    <div class="space-y-4">
+                        <div>
+                            <label for="report-subject" class="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+                            <input type="text" id="report-subject" class="w-full px-3 py-2 border border-gray-300 rounded-md form-input-focus" value="${report.subject}" required>
+                        </div>
+                        <div>
+                            <label for="report-grade" class="block text-sm font-medium text-gray-700 mb-1">Grade</label>
+                            <select id="report-grade" class="w-full px-3 py-2 border border-gray-300 rounded-md form-input-focus" required>
+                                <option value="">Select Grade</option>
+                                <option value="A+" ${report.grade === 'A+' ? 'selected' : ''}>A+</option>
+                                <option value="A" ${report.grade === 'A' ? 'selected' : ''}>A</option>
+                                <option value="A-" ${report.grade === 'A-' ? 'selected' : ''}>A-</option>
+                                <option value="B+" ${report.grade === 'B+' ? 'selected' : ''}>B+</option>
+                                <option value="B" ${report.grade === 'B' ? 'selected' : ''}>B</option>
+                                <option value="B-" ${report.grade === 'B-' ? 'selected' : ''}>B-</option>
+                                <option value="C+" ${report.grade === 'C+' ? 'selected' : ''}>C+</option>
+                                <option value="C" ${report.grade === 'C' ? 'selected' : ''}>C</option>
+                                <option value="C-" ${report.grade === 'C-' ? 'selected' : ''}>C-</option>
+                                <option value="D+" ${report.grade === 'D+' ? 'selected' : ''}>D+</option>
+                                <option value="D" ${report.grade === 'D' ? 'selected' : ''}>D</option>
+                                <option value="D-" ${report.grade === 'D-' ? 'selected' : ''}>D-</option>
+                                <option value="F" ${report.grade === 'F' ? 'selected' : ''}>F</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="report-date" class="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                            <input type="date" id="report-date" class="w-full px-3 py-2 border border-gray-300 rounded-md form-input-focus" value="${report.date}" required>
+                        </div>
+                        <div>
+                            <label for="report-comments" class="block text-sm font-medium text-gray-700 mb-1">Teacher Comments</label>
+                            <textarea id="report-comments" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md form-input-focus">${report.comments || ''}</textarea>
+                        </div>
+                    </div>
+                `;
+                
+                elements.modalSave.onclick = function() {
+                    const reportSubject = document.getElementById('report-subject').value.trim();
+                    const reportGrade = document.getElementById('report-grade').value;
+                    const reportDate = document.getElementById('report-date').value;
+                    const reportComments = document.getElementById('report-comments').value.trim();
+                    
+                    if (!reportSubject) {
+                        showToast('error', 'Please enter a subject');
+                        return;
+                    }
+                    
+                    if (!reportGrade) {
+                        showToast('error', 'Please select a grade');
+                        return;
+                    }
+                    
+                    if (!reportDate) {
+                        showToast('error', 'Please select a date');
+                        return;
+                    }
+                    
+                    // Update report
+                    report.subject = reportSubject;
+                    report.grade = reportGrade;
+                    report.date = reportDate;
+                    report.comments = reportComments;
+                    
+                    // Save data
+                    saveData();
+                    
+                    // Update UI
+                    renderReports(student.reports);
+                    
+                    // Hide modal
+                    hideModal();
+                    
+                    // Show toast
+                    showToast('success', 'Academic report updated successfully');
+                };
+                
+                elements.modalOverlay.classList.remove('hidden');
+            }
+
+            // Show delete report confirmation
+            function showDeleteReportConfirm(reportId) {
+                if (!appState.currentYear || !appState.currentClass || !appState.currentStudent) return;
+                
+                const year = appState.data.schoolYears.find(y => y.id === appState.currentYear);
+                const classItem = year?.classes.find(c => c.id === appState.currentClass);
+                const student = classItem?.students.find(s => s.id === appState.currentStudent);
+                const report = student?.reports.find(r => r.id === reportId);
+                
+                if (!report) return;
+                
+                elements.confirmTitle.textContent = 'Delete Academic Report';
+                elements.confirmMessage.textContent = `Are you sure you want to delete the report for "${report.subject}"? This action cannot be undone.`;
+                
+                elements.confirmOk.onclick = function() {
+                    // Delete report
+                    student.reports = student.reports.filter(r => r.id !== reportId);
+                    
+                    // Save data
+                    saveData();
+                    
+                    // Update UI
+                    renderReports(student.reports);
+                    
+                    // Hide confirm modal
+                    hideConfirmModal();
+                    
+                    // Show toast
+                    showToast('success', 'Academic report deleted successfully');
+                };
+                
+                elements.confirmModal.classList.remove('hidden');
+            }
+
+            // Show add penalty modal
+            function showAddPenaltyModal() {
+                if (!appState.currentYear || !appState.currentClass || !appState.currentStudent) return;
+                
+                elements.modalTitle.textContent = 'Add Disciplinary Record';
+                elements.modalBody.innerHTML = `
+                    <div class="space-y-4">
+                        <div>
+                            <label for="penalty-reason" class="block text-sm font-medium text-gray-700 mb-1">Reason</label>
+                            <input type="text" id="penalty-reason" class="w-full px-3 py-2 border border-gray-300 rounded-md form-input-focus" placeholder="e.g., Late submission" required>
+                        </div>
+                        <div>
+                            <label for="penalty-date" class="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                            <input type="date" id="penalty-date" class="w-full px-3 py-2 border border-gray-300 rounded-md form-input-focus" required>
+                        </div>
+                        <div>
+                            <label for="penalty-status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                            <select id="penalty-status" class="w-full px-3 py-2 border border-gray-300 rounded-md form-input-focus" required>
+                                <option value="">Select Status</option>
+                                <option value="Active">Active</option>
+                                <option value="Resolved">Resolved</option>
+                            </select>
+                        </div>
+                    </div>
+                `;
+                
+                // Set default date to today
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('penalty-date').value = today;
+                
+                elements.modalSave.onclick = function() {
+                    const penaltyReason = document.getElementById('penalty-reason').value.trim();
+                    const penaltyDate = document.getElementById('penalty-date').value;
+                    const penaltyStatus = document.getElementById('penalty-status').value;
+                    
+                    if (!penaltyReason) {
+                        showToast('error', 'Please enter a reason');
+                        return;
+                    }
+                    
+                    if (!penaltyDate) {
+                        showToast('error', 'Please select a date');
+                        return;
+                    }
+                    
+                    if (!penaltyStatus) {
+                        showToast('error', 'Please select a status');
+                        return;
+                    }
+                    
+                    const year = appState.data.schoolYears.find(y => y.id === appState.currentYear);
+                    const classItem = year?.classes.find(c => c.id === appState.currentClass);
+                    const student = classItem?.students.find(s => s.id === appState.currentStudent);
+                    
+                    // Create new penalty
+                    const newPenalty = {
+                        id: `penalty-${appState.nextId.penalty++}`,
+                        reason: penaltyReason,
+                        date: penaltyDate,
+                        status: penaltyStatus
+                    };
+                    
+                    // Add to data
+                    student.penalties.push(newPenalty);
+                    
+                    // Save data
+                    saveData();
+                    
+                    // Update UI
+                    renderPenalties(student.penalties);
+                    
+                    // Hide modal
+                    hideModal();
+                    
+                    // Show toast
+                    showToast('success', 'Disciplinary record added successfully');
+                };
+                
+                elements.modalOverlay.classList.remove('hidden');
+            }
+
+            // Show edit penalty modal
+            function showEditPenaltyModal(penaltyId) {
+                if (!appState.currentYear || !appState.currentClass || !appState.currentStudent) return;
+                
+                const year = appState.data.schoolYears.find(y => y.id === appState.currentYear);
+                const classItem = year?.classes.find(c => c.id === appState.currentClass);
+                const student = classItem?.students.find(s => s.id === appState.currentStudent);
+                const penalty = student?.penalties.find(p => p.id === penaltyId);
+                
+                if (!penalty) return;
+                
+                elements.modalTitle.textContent = 'Edit Disciplinary Record';
+                elements.modalBody.innerHTML = `
+                    <div class="space-y-4">
+                        <div>
+                            <label for="penalty-reason" class="block text-sm font-medium text-gray-700 mb-1">Reason</label>
+                            <input type="text" id="penalty-reason" class="w-full px-3 py-2 border border-gray-300 rounded-md form-input-focus" value="${penalty.reason}" required>
+                        </div>
+                        <div>
+                            <label for="penalty-date" class="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                            <input type="date" id="penalty-date" class="w-full px-3 py-2 border border-gray-300 rounded-md form-input-focus" value="${penalty.date}" required>
+                        </div>
+                        <div>
+                            <label for="penalty-status" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                            <select id="penalty-status" class="w-full px-3 py-2 border border-gray-300 rounded-md form-input-focus" required>
+                                <option value="">Select Status</option>
+                                <option value="Active" ${penalty.status === 'Active' ? 'selected' : ''}>Active</option>
+                                <option value="Resolved" ${penalty.status === 'Resolved' ? 'selected' : ''}>Resolved</option>
+                            </select>
+                        </div>
+                    </div>
+                `;
+                
+                elements.modalSave.onclick = function() {
+                    const penaltyReason = document.getElementById('penalty-reason').value.trim();
+                    const penaltyDate = document.getElementById('penalty-date').value;
+                    const penaltyStatus = document.getElementById('penalty-status').value;
+                    
+                    if (!penaltyReason) {
+                        showToast('error', 'Please enter a reason');
+                        return;
+                    }
+                    
+                    if (!penaltyDate) {
+                        showToast('error', 'Please select a date');
+                        return;
+                    }
+                    
+                    if (!penaltyStatus) {
+                        showToast('error', 'Please select a status');
+                        return;
+                    }
+                    
+                    // Update penalty
+                    penalty.reason = penaltyReason;
+                    penalty.date = penaltyDate;
+                    penalty.status = penaltyStatus;
+                    
+                    // Save data
+                    saveData();
+                    
+                    // Update UI
+                    renderPenalties(student.penalties);
+                    
+                    // Hide modal
+                    hideModal();
+                    
+                    // Show toast
+                    showToast('success', 'Disciplinary record updated successfully');
+                };
+                
+                elements.modalOverlay.classList.remove('hidden');
+            }
+
+            // Show delete penalty confirmation
+            function showDeletePenaltyConfirm(penaltyId) {
+                if (!appState.currentYear || !appState.currentClass || !appState.currentStudent) return;
+                
+                const year = appState.data.schoolYears.find(y => y.id === appState.currentYear);
+                const classItem = year?.classes.find(c => c.id === appState.currentClass);
+                const student = classItem?.students.find(s => s.id === appState.currentStudent);
+                const penalty = student?.penalties.find(p => p.id === penaltyId);
+                
+                if (!penalty) return;
+                
+                elements.confirmTitle.textContent = 'Delete Disciplinary Record';
+                elements.confirmMessage.textContent = `Are you sure you want to delete the disciplinary record for "${penalty.reason}"? This action cannot be undone.`;
+                
+                elements.confirmOk.onclick = function() {
+                    // Delete penalty
+                    student.penalties = student.penalties.filter(p => p.id !== penaltyId);
+                    
+                    // Save data
+                    saveData();
+                    
+                    // Update UI
+                    renderPenalties(student.penalties);
+                    
+                    // Hide confirm modal
+                    hideConfirmModal();
+                    
+                    // Show toast
+                    showToast('success', 'Disciplinary record deleted successfully');
+                };
+                
+                elements.confirmModal.classList.remove('hidden');
+            }
+
+            // Generate student PDF report
+            function generateStudentPDF() {
+                if (!appState.currentYear || !appState.currentClass || !appState.currentStudent) return;
+                
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                const year = appState.data.schoolYears.find(y => y.id === appState.currentYear);
+                const classItem = year?.classes.find(c => c.id === appState.currentClass);
+                const student = classItem?.students.find(s => s.id === appState.currentStudent);
+                
+                if (!student) return;
+                
+                // Add header
+                doc.setFontSize(18);
+                doc.text('ToIvy Education Student Data Archive', 105, 20, { align: 'center' });
+                
+                doc.setFontSize(14);
+                doc.text('Academic Transcript', 105, 30, { align: 'center' });
+                
+                // Add student info
+                doc.setFontSize(12);
+                doc.text(`Student Name: ${student.name}`, 20, 50);
+                doc.text(`Gender: ${student.gender}`, 20, 58);
+                doc.text(`School: ${student.school || 'N/A'}`, 20, 66);
+                doc.text(`Academic Year: ${year.name}`, 20, 74);
+                doc.text(`Class: ${classItem.name}`, 20, 82);
+                
+                // Add parent contact
+                if (student.parentContact) {
+                    doc.text(`Parent Contact: ${student.parentContact}`, 20, 90);
+                }
+                
+                // Add additional info
+                if (student.additionalInfo) {
+                    doc.text(`Additional Information: ${student.additionalInfo}`, 20, 98);
+                }
+                
+                // Add reports header
+                doc.setFontSize(14);
+                doc.text('Academic Reports', 105, 115, { align: 'center' });
+                
+                // Add reports table
+                if (student.reports.length > 0) {
+                    // Sort reports by subject
+                    const sortedReports = [...student.reports].sort((a, b) => a.subject.localeCompare(b.subject));
+                    
+                    let yPos = 125;
+                    
+                    // Table header
+                    doc.setFontSize(10);
+                    doc.setFont(undefined, 'bold');
+                    doc.text('Subject', 20, yPos);
+                    doc.text('Grade', 80, yPos);
+                    doc.text('Date', 110, yPos);
+                    doc.text('Comments', 140, yPos);
+                    
+                    yPos += 8;
+                    
+                    // Table content
+                    doc.setFont(undefined, 'normal');
+                    sortedReports.forEach(report => {
+                        // Check if we need a new page
+                        if (yPos > 270) {
+                            doc.addPage();
+                            yPos = 20;
+                            
+                            // Add header on new page
+                            doc.setFontSize(12);
+                            doc.text(`Student: ${student.name} - Academic Reports (Continued)`, 105, 15, { align: 'center' });
+                            
+                            // Table header
+                            doc.setFontSize(10);
+                            doc.setFont(undefined, 'bold');
+                            doc.text('Subject', 20, yPos);
+                            doc.text('Grade', 80, yPos);
+                            doc.text('Date', 110, yPos);
+                            doc.text('Comments', 140, yPos);
+                            
+                            yPos += 8;
+                            doc.setFont(undefined, 'normal');
+                        }
+                        
+                        // Subject (wrap text if needed)
+                        const subjectLines = doc.splitTextToSize(report.subject, 50);
+                        doc.text(subjectLines, 20, yPos);
+                        
+                        // Grade
+                        doc.text(report.grade, 80, yPos);
+                        
+                        // Date
+                        doc.text(formatDate(report.date), 110, yPos);
+                        
+                        // Comments (wrap text if needed)
+                        const commentLines = doc.splitTextToSize(report.comments || 'No comments', 40);
+                        doc.text(commentLines, 140, yPos);
+                        
+                        // Move to next row
+                        yPos += Math.max(subjectLines.length, commentLines.length) * 6 + 4;
+                    });
+                } else {
+                    doc.setFontSize(10);
+                    doc.text('No academic reports available.', 105, 130, { align: 'center' });
+                }
+                
+                // Add disciplinary records if any
+                if (student.penalties.length > 0) {
+                    // Check if we need a new page
+                    if (yPos > 220) {
+                        doc.addPage();
+                        yPos = 20;
+                    } else {
+                        yPos += 10;
+                    }
+                    
+                    // Add penalties header
+                    doc.setFontSize(14);
+                    doc.text('Disciplinary Records', 105, yPos, { align: 'center' });
+                    yPos += 10;
+                    
+                    // Table header
+                    doc.setFontSize(10);
+                    doc.setFont(undefined, 'bold');
+                    doc.text('Reason', 20, yPos);
+                    doc.text('Date', 110, yPos);
+                    doc.text('Status', 150, yPos);
+                    
+                    yPos += 8;
+                    
+                    // Table content
+                    doc.setFont(undefined, 'normal');
+                    
+                    // Sort penalties by date (newest first)
+                    const sortedPenalties = [...student.penalties].sort((a, b) => new Date(b.date) - new Date(a.date));
+                    
+                    sortedPenalties.forEach(penalty => {
+                        // Check if we need a new page
+                        if (yPos > 270) {
+                            doc.addPage();
+                            yPos = 20;
+                            
+                            // Add header on new page
+                            doc.setFontSize(12);
+                            doc.text(`Student: ${student.name} - Disciplinary Records (Continued)`, 105, 15, { align: 'center' });
+                            
+                            // Table header
+                            doc.setFontSize(10);
+                            doc.setFont(undefined, 'bold');
+                            doc.text('Reason', 20, yPos);
+                            doc.text('Date', 110, yPos);
+                            doc.text('Status', 150, yPos);
+                            
+                            yPos += 8;
+                            doc.setFont(undefined, 'normal');
+                        }
+                        
+                        // Reason (wrap text if needed)
+                        const reasonLines = doc.splitTextToSize(penalty.reason, 80);
+                        doc.text(reasonLines, 20, yPos);
+                        
+                        // Date
+                        doc.text(formatDate(penalty.date), 110, yPos);
+                        
+                        // Status
+                        doc.text(penalty.status, 150, yPos);
+                        
+                        // Move to next row
+                        yPos += reasonLines.length * 6 + 4;
+                    });
+                }
+                
+                // Add footer
+                const pageCount = doc.internal.getNumberOfPages();
+                for (let i = 1; i <= pageCount; i++) {
+                    doc.setPage(i);
+                    doc.setFontSize(8);
+                    doc.text(`Page ${i} of ${pageCount}`, 105, 290, { align: 'center' });
+                    doc.text(`Generated on ${formatDate(new Date().toISOString().split('T')[0])}`, 105, 295, { align: 'center' });
+                }
+                
+                // Save PDF
+                doc.save(`${student.name.replace(/\s+/g, '_')}_Transcript.pdf`);
+                
+                // Show toast
+                showToast('success', 'PDF transcript generated successfully');
+            }
+
+            // Export data to JSON file
+            function exportData() {
+                const dataToExport = {
+                    data: appState.data,
+                    nextId: appState.nextId,
+                    exportDate: new Date().toISOString()
+                };
+                
+                const dataStr = JSON.stringify(dataToExport, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(dataBlob);
+                link.download = `toivy_student_data_${formatDate(new Date().toISOString().split('T')[0])}.json`;
+                link.click();
+                
+                showToast('success', 'Data exported successfully');
+            }
+
+            // Handle file import
+            function handleFileImport(event) {
+                const file = event.target.files[0];
+                
+                if (!file) return;
+                
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    try {
+                        const importedData = JSON.parse(e.target.result);
+                        
+                        // Validate data structure
+                        if (!importedData.data || !importedData.data.schoolYears || !Array.isArray(importedData.data.schoolYears)) {
+                            throw new Error('Invalid data structure');
+                        }
+                        
+                        // Update app state
+                        appState.data = importedData.data;
+                        appState.nextId = importedData.nextId || {
+                            year: 1,
+                            class: 1,
+                            student: 1,
+                            report: 1,
+                            penalty: 1
+                        };
+                        
+                        // Save data
+                        saveData();
+                        
+                        // Reset UI
+                        navigateToYearList();
+                        renderYearList();
+                        
+                        // Show toast
+                        showToast('success', 'Data imported successfully');
+                    } catch (error) {
+                        console.error('Error importing data:', error);
+                        showToast('error', 'Failed to import data. Please check the file format.');
+                    }
+                };
+                
+                reader.readAsText(file);
+                
+                // Reset file input
+                event.target.value = '';
+            }
+
+            // Hide modal
+            function hideModal() {
+                elements.modalOverlay.classList.add('hidden');
+            }
+
+            // Hide confirm modal
+            function hideConfirmModal() {
+                elements.confirmModal.classList.add('hidden');
+            }
+
+            // Show toast notification
+            function showToast(type, message) {
+                const { toast, toastIcon, toastMessage } = elements;
+                
+                // Set icon and color based on type
+                if (type === 'success') {
+                    toastIcon.className = 'text-lg text-green-500';
+                    toastIcon.innerHTML = '<i class="fa fa-check-circle"></i>';
+                } else if (type === 'error') {
+                    toastIcon.className = 'text-lg text-red-500';
+                    toastIcon.innerHTML = '<i class="fa fa-exclamation-circle"></i>';
+                } else if (type === 'info') {
+                    toastIcon.className = 'text-lg text-blue-500';
+                    toastIcon.innerHTML = '<i class="fa fa-info-circle"></i>';
+                }
+                
+                // Set message
+                toastMessage.textContent = message;
+                
+                // Show toast
+                toast.classList.remove('translate-y-20', 'opacity-0');
+                
+                // Hide toast after 3 seconds
+                setTimeout(() => {
+                    toast.classList.add('translate-y-20', 'opacity-0');
+                }, 3000);
+            }
+
+            // Format date (YYYY-MM-DD to MM/DD/YYYY)
+            function formatDate(dateString) {
+                if (!dateString) return '';
+                
+                const date = new Date(dateString);
+                return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
+            }
+
+            // Get grade badge class
+            function getGradeBadgeClass(grade) {
+                const gradeMap = {
+                    'A+': 'badge-green',
+                    'A': 'badge-green',
+                    'A-': 'badge-green',
+                    'B+': 'badge-blue',
+                    'B': 'badge-blue',
+                    'B-': 'badge-blue',
+                    'C+': 'badge-yellow',
+                    'C': 'badge-yellow',
+                    'C-': 'badge-yellow',
+                    'D+': 'badge-red',
+                    'D': 'badge-red',
+                    'D-': 'badge-red',
+                    'F': 'badge-red'
+                };
+                
+                return gradeMap[grade] || 'badge-yellow';
+            }
+
+            // Get status badge class
+            function getStatusBadgeClass(status) {
+                if (status === 'Active') {
+                    return 'badge-red';
+                } else if (status === 'Resolved') {
+                    return 'badge-green';
+                }
+                
+                return 'badge-yellow';
+            }
+
+            // Initialize the application
+            init();
+        });
+    </script>
+</body>
+</html>
