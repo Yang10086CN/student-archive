@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Z's Student Archive</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f110e;
+    --surface: #181c17;
+    --surface2: #1f251d;
+    --border: #2a3228;
+    --accent: #6db370;
+    --accent2: #e8a243;
+    --accent3: #e05c3a;
+    --text: #dde8d9;
+    --text2: #8a9e87;
+    --text3: #536151;
+    --danger: #e05c3a;
+    --warn: #e8a243;
+    --good: #6db370;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; font-size: 14px; }
+  .shell { display: flex; height: 100vh; overflow: hidden; }
+  .sidebar { width: 260px; min-width: 260px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .sidebar-header { padding: 24px 20px 16px; border-bottom: 1px solid var(--border); }
+  .sidebar-header .logo { font-family: 'DM Serif Display', serif; font-size: 22px; color: var(--accent); letter-spacing: -0.5px; }
+  .sidebar-header .sub { font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; margin-top: 2px; letter-spacing: 0.5px; }
+  .sidebar-nav { flex: 1; overflow-y: auto; padding: 12px 0; }
+  .year-item { display: flex; align-items: center; justify-content: space-between; padding: 7px 20px; cursor: pointer; color: var(--text2); font-size: 13px; font-weight: 500; transition: all 0.15s; border-left: 2px solid transparent; }
+  .year-item:hover { background: var(--surface2); color: var(--text); }
+  .year-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(109,179,112,0.06); }
+  .year-item .chevron { font-size: 10px; transition: transform 0.2s; }
+  .year-item.open .chevron { transform: rotate(90deg); }
+  .class-item { padding: 6px 20px 6px 34px; cursor: pointer; color: var(--text3); font-size: 12.5px; display: flex; align-items: center; justify-content: space-between; transition: all 0.15s; border-left: 2px solid transparent; }
+  .class-item:hover { color: var(--text); background: var(--surface2); }
+  .class-item.active { color: var(--accent2); border-left-color: var(--accent2); }
+  .class-item .badge { font-family: 'DM Mono', monospace; font-size: 10px; background: var(--surface2); padding: 1px 6px; border-radius: 10px; color: var(--text3); }
+  .add-btn { display: flex; align-items: center; gap: 6px; padding: 7px 20px; color: var(--text3); font-size: 12px; cursor: pointer; transition: color 0.15s; }
+  .add-btn:hover { color: var(--accent); }
+  .add-btn span { font-size: 16px; line-height: 1; }
+  .main-header { padding: 20px 28px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: var(--surface); flex-shrink: 0; }
+  .breadcrumb { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--text3); letter-spacing: 0.5px; }
+  .breadcrumb .sep { margin: 0 6px; }
+  .breadcrumb .current { color: var(--accent2); }
+  .page-title { font-family: 'DM Serif Display', serif; font-size: 24px; color: var(--text); margin-top: 4px; }
+  .header-actions { display: flex; gap: 10px; align-items: center; }
+  .btn { padding: 8px 16px; border-radius: 6px; border: 1px solid var(--border); font-family: 'DM Sans', sans-serif; font-size: 13px; cursor: pointer; transition: all 0.15s; font-weight: 500; }
+  .btn-primary { background: var(--accent); color: #0f110e; border-color: var(--accent); }
+  .btn-primary:hover { background: #7ec881; }
+  .btn-ghost { background: transparent; color: var(--text2); }
+  .btn-ghost:hover { background: var(--surface2); color: var(--text); }
+  .btn-danger { background: transparent; color: var(--danger); border-color: var(--danger); }
+  .btn-danger:hover { background: var(--danger); color: white; }
+  .content { flex: 1; overflow-y: auto; padding: 28px; }
+  .welcome { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; text-align: center; gap: 12px; }
+  .welcome-icon { font-size: 48px; opacity: 0.3; }
+  .welcome h2 { font-family: 'DM Serif Display', serif; font-size: 28px; color: var(--text2); }
+  .welcome p { color: var(--text3); font-size: 13px; max-width: 300px; line-height: 1.6; }
+  .student-table-wrap { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .student-table { width: 100%; border-collapse: collapse; }
+  .student-table th { background: var(--surface2); padding: 10px 14px; text-align: left; font-size: 10px; font-family: 'DM Mono', monospace; letter-spacing: 1px; text-transform: uppercase; color: var(--text3); border-bottom: 1px solid var(--border); font-weight: 400; }
+  .student-table td { padding: 12px 14px; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: middle; }
+  .student-table tr:last-child td { border-bottom: none; }
+  .student-table tr:hover td { background: rgba(109,179,112,0.03); }
+  .student-name-cell { cursor: pointer; }
+  .student-name-cell .name { font-weight: 500; color: var(--text); }
+  .student-name-cell .join { font-size: 11px; color: var(--text3); font-family: 'DM Mono', monospace; margin-top: 2px; }
+  .grade-pill { display: inline-block; padding: 3px 10px; border-radius: 20px; font-family: 'DM Mono', monospace; font-size: 12px; font-weight: 500; }
+  .grade-a { background: rgba(109,179,112,0.15); color: var(--good); }
+  .grade-b { background: rgba(232,162,67,0.15); color: var(--warn); }
+  .grade-c { background: rgba(224,92,58,0.15); color: var(--danger); }
+  .attend-bar { width: 80px; height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; display: inline-block; vertical-align: middle; margin-right: 6px; }
+  .attend-bar-fill { height: 100%; border-radius: 3px; }
+  .action-btns { display: flex; gap: 6px; }
+  .icon-btn { width: 28px; height: 28px; border-radius: 5px; border: 1px solid var(--border); background: transparent; color: var(--text3); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px; transition: all 0.15s; }
+  .icon-btn:hover { background: var(--surface2); color: var(--text); }
+  .icon-btn.del:hover { border-color: var(--danger); color: var(--danger); }
+  .stats-row { display: flex; gap: 14px; margin-bottom: 24px; }
+  .stat-card { flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 20px; }
+  .stat-card .label { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--text3); letter-spacing: 1px; text-transform: uppercase; }
+  .stat-card .value { font-family: 'DM Serif Display', serif; font-size: 28px; color: var(--text); margin-top: 4px; }
+  .stat-card .sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.75); display: flex; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(4px); }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; width: 520px; max-width: 95vw; max-height: 90vh; overflow-y: auto; }
+  .modal-header { padding: 20px 24px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .modal-title { font-family: 'DM Serif Display', serif; font-size: 20px; }
+  .modal-close { width: 28px; height: 28px; border-radius: 5px; border: 1px solid var(--border); background: transparent; color: var(--text3); cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; }
+  .modal-close:hover { color: var(--text); background: var(--surface2); }
+  .modal-body { padding: 20px 24px; }
+  .modal-footer { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 10px; justify-content: flex-end; }
+  .form-group { margin-bottom: 16px; }
+  .form-row { display: flex; gap: 12px; }
+  .form-row .form-group { flex: 1; }
+  label { display: block; font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text3); letter-spacing: 0.5px; margin-bottom: 6px; text-transform: uppercase; }
+  input, select, textarea { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 9px 12px; transition: border-color 0.15s; outline: none; }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 80px; }
+  select option { background: var(--surface); }
+  .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+  .tab { padding: 10px 18px; font-size: 13px; cursor: pointer; color: var(--text3); border-bottom: 2px solid transparent; transition: all 0.15s; font-weight: 500; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 24px; }
+  .detail-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; }
+  .detail-card .dc-label { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--text3); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+  .detail-card .dc-value { font-size: 14px; color: var(--text); font-weight: 500; }
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .section-title { font-family: 'DM Serif Display', serif; font-size: 18px; color: var(--text); }
+  .grade-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+  .grade-table th { text-align: left; font-size: 10px; font-family: 'DM Mono', monospace; color: var(--text3); letter-spacing: 1px; text-transform: uppercase; padding: 8px 12px; border-bottom: 1px solid var(--border); font-weight: 400; }
+  .grade-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .grade-table tr:last-child td { border-bottom: none; }
+  .behavior-entry { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; margin-bottom: 10px; }
+  .behavior-entry .be-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .behavior-entry .be-date { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text3); }
+  .behavior-tag { font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 500; }
+  .tag-positive { background: rgba(109,179,112,0.15); color: var(--good); }
+  .tag-neutral { background: rgba(138,158,135,0.15); color: var(--text2); }
+  .tag-negative { background: rgba(224,92,58,0.15); color: var(--danger); }
+  .behavior-entry .be-note { font-size: 13px; color: var(--text2); line-height: 1.5; }
+  .attend-entries { display: flex; flex-direction: column; gap: 8px; }
+  .attend-entry { display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 7px; padding: 10px 14px; font-size: 13px; }
+  .attend-status { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .status-present { background: var(--good); }
+  .status-absent { background: var(--danger); }
+  .status-late { background: var(--warn); }
+  .attend-date { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text3); min-width: 90px; }
+  .attend-status-text { color: var(--text2); }
+  .attend-note { color: var(--text3); font-size: 12px; flex: 1; text-align: right; }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .empty-state { text-align: center; padding: 32px; color: var(--text3); font-size: 13px; }
+  .empty-state .ei { font-size: 28px; margin-bottom: 8px; opacity: 0.4; }
+  .hidden { display: none !important; }
+  .search-bar { background: var(--bg); border: 1px solid var(--border); border-radius: 7px; padding: 8px 14px; color: var(--text); font-size: 13px; width: 220px; outline: none; font-family: 'DM Sans', sans-serif; }
+  .search-bar:focus { border-color: var(--accent); }
+  .search-bar::placeholder { color: var(--text3); }
+  .weighted-total { font-family: 'DM Serif Display', serif; font-size: 32px; margin-bottom: 4px; }
+  .loading { display: flex; align-items: center; justify-content: center; height: 100%; flex-direction: column; gap: 12px; color: var(--text3); font-family: 'DM Mono', monospace; font-size: 13px; }
+  .spinner { width: 28px; height: 28px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .sync-indicator { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--text3); display: flex; align-items: center; gap: 6px; }
+  .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--good); }
+  .sync-dot.syncing { background: var(--warn); animation: pulse 1s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">Archive</div>
+      <div class="sub">Z · STUDENT DATA</div>
+    </div>
+    <div class="sidebar-nav" id="sidebarNav"><div class="loading" style="height:100px;"><div class="spinner"></div></div></div>
+  </div>
+  <div class="main">
+    <div class="main-header">
+      <div>
+        <div class="breadcrumb" id="breadcrumb">Student Archive</div>
+        <div class="page-title" id="pageTitle">Overview</div>
+      </div>
+      <div class="header-actions" id="headerActions">
+        <div class="sync-indicator"><div class="sync-dot" id="syncDot"></div><span id="syncLabel">Connected</span></div>
+      </div>
+    </div>
+    <div class="content" id="mainContent"><div class="loading"><div class="spinner"></div><span>Connecting to database…</span></div></div>
+  </div>
+</div>
+
+<div id="modalOverlay" class="modal-overlay hidden">
+  <div class="modal" id="modalBox">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle"></div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-footer" id="modalFooter"></div>
+  </div>
+</div>
+
+<!-- Firebase SDKs -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getFirestore, collection, doc, onSnapshot,
+  addDoc, updateDoc, deleteDoc, setDoc, getDoc
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyC93Ape_hESKd53zRrFwVEILyJnqfLf8Ak",
+  authDomain: "z-student-archive.firebaseapp.com",
+  projectId: "z-student-archive",
+  storageBucket: "z-student-archive.firebasestorage.app",
+  messagingSenderId: "201096822686",
+  appId: "1:201096822686:web:5d26dfe9d2741ce565608f"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// ── STATE ────────────────────────────────────────────────────────────
+let years = [];
+let currentView = { type: 'welcome', yearId: null, classId: null, studentId: null };
+let activeTab = 'grades';
+
+// ── SYNC INDICATOR ───────────────────────────────────────────────────
+function setSyncing(on) {
+  const dot = document.getElementById('syncDot');
+  const label = document.getElementById('syncLabel');
+  if (on) { dot.classList.add('syncing'); label.textContent = 'Saving…'; }
+  else { dot.classList.remove('syncing'); label.textContent = 'Synced'; }
+}
+
+// ── HELPERS ──────────────────────────────────────────────────────────
+function getYear(yid) { return years.find(y => y.id === yid); }
+function getClass(yid, cid) { return getYear(yid)?.classes?.find(c => c.id === cid); }
+function getStudent(yid, cid, sid) { return getClass(yid, cid)?.students?.find(s => s.id === sid); }
+
+function weightedGrade(grades) {
+  if (!grades || grades.length === 0) return null;
+  const totalWeight = grades.reduce((s, g) => s + (parseFloat(g.weight) || 0), 0);
+  if (totalWeight === 0) return null;
+  const weighted = grades.reduce((s, g) => s + (parseFloat(g.score) || 0) * (parseFloat(g.weight) || 0), 0);
+  return (weighted / totalWeight).toFixed(1);
+}
+function gradeLabel(score) {
+  if (score === null || score === undefined) return { text: '—', cls: '' };
+  const n = parseFloat(score);
+  if (n >= 90) return { text: score + '%', cls: 'grade-a' };
+  if (n >= 75) return { text: score + '%', cls: 'grade-b' };
+  return { text: score + '%', cls: 'grade-c' };
+}
+function attendRate(records) {
+  if (!records || records.length === 0) return null;
+  return Math.round((records.filter(r => r.status === 'present').length / records.length) * 100);
+}
+
+// ── FIRESTORE REAL-TIME LISTENER ─────────────────────────────────────
+const yearsCol = collection(db, 'years');
+onSnapshot(yearsCol, snapshot => {
+  years = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+  years.sort((a, b) => (a.name > b.name ? 1 : -1));
+  renderSidebar();
+  rerenderCurrentView();
+}, err => {
+  document.getElementById('syncLabel').textContent = 'Offline';
+  document.getElementById('syncDot').style.background = 'var(--danger)';
+});
+
+function rerenderCurrentView() {
+  if (currentView.type === 'student') renderStudentView(currentView.yearId, currentView.classId, currentView.studentId);
+  else if (currentView.type === 'class') renderClassView(currentView.yearId, currentView.classId);
+  else renderWelcome();
+}
+
+// ── FIRESTORE WRITES ─────────────────────────────────────────────────
+async function saveYear(data) {
+  setSyncing(true);
+  await addDoc(yearsCol, { name: data.name, classes: [] });
+  setSyncing(false);
+}
+async function updateYear(yid, data) {
+  setSyncing(true);
+  await updateDoc(doc(db, 'years', yid), data);
+  setSyncing(false);
+}
+async function deleteYear(yid) {
+  setSyncing(true);
+  await deleteDoc(doc(db, 'years', yid));
+  setSyncing(false);
+}
+
+// Classes and students are stored as arrays inside the year document
+async function updateYearDoc(yid, updater) {
+  setSyncing(true);
+  const year = getYear(yid);
+  const updated = updater(JSON.parse(JSON.stringify(year)));
+  await updateDoc(doc(db, 'years', yid), { classes: updated.classes });
+  setSyncing(false);
+}
+
+// ── SIDEBAR ──────────────────────────────────────────────────────────
+function renderSidebar() {
+  const nav = document.getElementById('sidebarNav');
+  let html = '';
+  years.forEach(year => {
+    const isOpen = currentView.yearId === year.id;
+    html += `<div class="year-item ${isOpen ? 'open active' : ''}" onclick="selectYear('${year.id}')">
+      <span>${year.name}</span><span class="chevron">▶</span>
+    </div>`;
+    if (isOpen && year.classes) {
+      year.classes.forEach(cls => {
+        const active = currentView.classId === cls.id;
+        html += `<div class="class-item ${active ? 'active' : ''}" onclick="selectClass('${year.id}','${cls.id}')">
+          <span>${cls.name}</span>
+          <span class="badge">${(cls.students || []).length}</span>
+        </div>`;
+      });
+      html += `<div class="add-btn" onclick="openAddClass('${year.id}')"><span>+</span> Add Class</div>`;
+    }
+  });
+  html += `<div class="add-btn" onclick="openAddYear()"><span>+</span> Add Year</div>`;
+  nav.innerHTML = html;
+}
+
+// ── VIEWS ─────────────────────────────────────────────────────────────
+window.renderWelcome = function() {
+  currentView = { type: 'welcome', yearId: currentView.yearId, classId: null, studentId: null };
+  document.getElementById('breadcrumb').textContent = 'Student Archive';
+  document.getElementById('pageTitle').textContent = 'Overview';
+  setHeaderActions(`<div class="sync-indicator"><div class="sync-dot" id="syncDot"></div><span id="syncLabel">Synced</span></div>`);
+
+  const totalStudents = years.reduce((s, y) => s + (y.classes || []).reduce((s2, c) => s2 + (c.students || []).length, 0), 0);
+  const totalClasses = years.reduce((s, y) => s + (y.classes || []).length, 0);
+
+  let html = `<div class="stats-row">
+    <div class="stat-card"><div class="label">Years</div><div class="value">${years.length}</div></div>
+    <div class="stat-card"><div class="label">Classes</div><div class="value">${totalClasses}</div></div>
+    <div class="stat-card"><div class="label">Students</div><div class="value">${totalStudents}</div></div>
+  </div>`;
+
+  if (years.length === 0) {
+    html += `<div class="welcome"><div class="welcome-icon">📚</div><h2>Welcome, Z</h2><p>Start by adding an academic year in the sidebar, then create classes and add students.</p></div>`;
+  } else {
+    years.forEach(year => {
+      html += `<div style="margin-bottom:20px;"><div style="font-size:13px;font-weight:600;color:var(--text2);margin-bottom:10px;font-family:'DM Mono',monospace;">${year.name}</div><div style="display:flex;gap:10px;flex-wrap:wrap;">`;
+      (year.classes || []).forEach(cls => {
+        html += `<div onclick="selectClass('${year.id}','${cls.id}')" style="cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 16px;min-width:140px;transition:border-color 0.15s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+          <div style="font-weight:500;color:var(--text);margin-bottom:4px;">${cls.name}</div>
+          <div style="font-size:12px;color:var(--text3);font-family:'DM Mono',monospace;">${(cls.students||[]).length} students</div>
+        </div>`;
+      });
+      html += `</div></div>`;
+    });
+  }
+  document.getElementById('mainContent').innerHTML = html;
+}
+
+window.renderClassView = function(yid, cid) {
+  const year = getYear(yid); const cls = getClass(yid, cid);
+  if (!year || !cls) return;
+  currentView = { type: 'class', yearId: yid, classId: cid, studentId: null };
+  document.getElementById('breadcrumb').innerHTML = `${year.name} <span class="sep">›</span> <span class="current">${cls.name}</span>`;
+  document.getElementById('pageTitle').textContent = cls.name;
+  setHeaderActions(`
+    <input class="search-bar" placeholder="Search students…" oninput="filterStudents(this.value)" id="studentSearch">
+    <button class="btn btn-primary" onclick="openAddStudent('${yid}','${cid}')">+ Add Student</button>
+    <button class="btn btn-ghost" onclick="openEditClass('${yid}','${cid}')">Edit</button>
+    <button class="btn btn-danger" onclick="deleteClassUI('${yid}','${cid}')">Delete</button>
+    <div class="sync-indicator"><div class="sync-dot" id="syncDot"></div><span id="syncLabel">Synced</span></div>`);
+
+  const students = cls.students || [];
+  const grades = students.map(s => weightedGrade(s.grades)).filter(g => g !== null).map(Number);
+  const avgGrade = grades.length ? (grades.reduce((a,b) => a+b,0)/grades.length).toFixed(1) : '—';
+  const attends = students.map(s => attendRate(s.attendance)).filter(a => a !== null);
+  const avgAttend = attends.length ? Math.round(attends.reduce((a,b)=>a+b,0)/attends.length) : null;
+
+  let html = `<div class="stats-row">
+    <div class="stat-card"><div class="label">Students</div><div class="value">${students.length}</div></div>
+    <div class="stat-card"><div class="label">Class Avg</div><div class="value" style="font-size:24px;">${avgGrade === '—' ? '—' : avgGrade+'%'}</div></div>
+    <div class="stat-card"><div class="label">Avg Attendance</div><div class="value">${avgAttend !== null ? avgAttend+'%' : '—'}</div></div>
+  </div>
+  <div class="student-table-wrap"><table class="student-table"><thead><tr>
+    <th>Student</th><th>Contact</th><th>Weighted Grade</th><th>Attendance</th><th>Actions</th>
+  </tr></thead><tbody id="studentTbody">`;
+
+  if (students.length === 0) {
+    html += `<tr><td colspan="5"><div class="empty-state"><div class="ei">👤</div>No students yet.</div></td></tr>`;
+  } else {
+    students.forEach(s => {
+      const wg = weightedGrade(s.grades); const gl = gradeLabel(wg);
+      const ar = attendRate(s.attendance);
+      const arColor = ar === null ? 'var(--text3)' : ar >= 80 ? 'var(--good)' : ar >= 60 ? 'var(--warn)' : 'var(--danger)';
+      html += `<tr data-name="${s.name.toLowerCase()}">
+        <td class="student-name-cell" onclick="selectStudent('${yid}','${cid}','${s.id}')">
+          <div class="name">${s.name}</div><div class="join">Joined: ${s.joinDate||'—'}</div>
+        </td>
+        <td style="color:var(--text2);font-size:12px;">${s.phone||'—'}<br><span style="color:var(--text3)">${s.email||''}</span></td>
+        <td>${wg !== null ? `<span class="grade-pill ${gl.cls}">${gl.text}</span>` : '<span style="color:var(--text3)">—</span>'}</td>
+        <td>${ar !== null ? `<span class="attend-bar"><span class="attend-bar-fill" style="width:${ar}%;background:${arColor}"></span></span><span style="font-family:'DM Mono',monospace;font-size:12px;color:${arColor}">${ar}%</span>` : '<span style="color:var(--text3)">—</span>'}</td>
+        <td><div class="action-btns">
+          <button class="icon-btn" onclick="selectStudent('${yid}','${cid}','${s.id}')">👁</button>
+          <button class="icon-btn" onclick="openEditStudent('${yid}','${cid}','${s.id}')">✏️</button>
+          <button class="icon-btn del" onclick="deleteStudentUI('${yid}','${cid}','${s.id}')">🗑</button>
+        </div></td>
+      </tr>`;
+    });
+  }
+  html += `</tbody></table></div>`;
+  document.getElementById('mainContent').innerHTML = html;
+}
+
+window.renderStudentView = function(yid, cid, sid) {
+  const year = getYear(yid); const cls = getClass(yid, cid); const s = getStudent(yid, cid, sid);
+  if (!s) { selectClass(yid, cid); return; }
+  currentView = { type: 'student', yearId: yid, classId: cid, studentId: sid };
+  document.getElementById('breadcrumb').innerHTML = `${year.name} <span class="sep">›</span> ${cls.name} <span class="sep">›</span> <span class="current">${s.name}</span>`;
+  document.getElementById('pageTitle').textContent = s.name;
+  setHeaderActions(`
+    <button class="btn btn-ghost" onclick="openEditStudent('${yid}','${cid}','${sid}')">Edit Info</button>
+    <button class="btn btn-ghost" onclick="selectClass('${yid}','${cid}')">← Back</button>
+    <div class="sync-indicator"><div class="sync-dot" id="syncDot"></div><span id="syncLabel">Synced</span></div>`);
+
+  const wg = weightedGrade(s.grades); const ar = attendRate(s.attendance);
+
+  let html = `<div class="detail-grid">
+    <div class="detail-card"><div class="dc-label">Phone</div><div class="dc-value">${s.phone||'—'}</div></div>
+    <div class="detail-card"><div class="dc-label">Email</div><div class="dc-value">${s.email||'—'}</div></div>
+    <div class="detail-card"><div class="dc-label">Join Date</div><div class="dc-value">${s.joinDate||'—'}</div></div>
+    <div class="detail-card"><div class="dc-label">Grade Level</div><div class="dc-value">${s.gradeLevel||'—'}</div></div>
+    ${s.notes ? `<div class="detail-card" style="grid-column:1/-1"><div class="dc-label">Notes</div><div class="dc-value" style="color:var(--text2);font-weight:400">${s.notes}</div></div>` : ''}
+  </div>
+  <div class="tabs">
+    <div class="tab ${activeTab==='grades'?'active':''}" onclick="switchTab('grades','${yid}','${cid}','${sid}')">Grades</div>
+    <div class="tab ${activeTab==='attendance'?'active':''}" onclick="switchTab('attendance','${yid}','${cid}','${sid}')">Attendance</div>
+    <div class="tab ${activeTab==='behavior'?'active':''}" onclick="switchTab('behavior','${yid}','${cid}','${sid}')">Behavior</div>
+  </div>`;
+
+  if (activeTab === 'grades') {
+    html += `<div class="section-header"><div>
+      <div class="section-title">Grade Tracking</div>
+      ${wg !== null ? `<div class="weighted-total" style="${parseFloat(wg)>=90?'color:var(--good)':parseFloat(wg)>=75?'color:var(--warn)':'color:var(--danger)'}">${wg}%</div><div style="font-size:12px;color:var(--text3)">Weighted Average</div>` : ''}
+    </div><button class="btn btn-primary" onclick="openAddGrade('${yid}','${cid}','${sid}')">+ Add Grade</button></div>`;
+    if (!s.grades || s.grades.length === 0) { html += `<div class="empty-state"><div class="ei">📊</div>No grades yet.</div>`; }
+    else {
+      html += `<table class="grade-table"><thead><tr><th>Assignment</th><th>Category</th><th>Score</th><th>Weight</th><th>Weighted</th><th></th></tr></thead><tbody>`;
+      s.grades.forEach((g, i) => {
+        const gl2 = gradeLabel(g.score);
+        html += `<tr><td style="color:var(--text)">${g.name}</td><td style="color:var(--text2)">${g.category||'—'}</td>
+          <td><span class="grade-pill ${gl2.cls}">${gl2.text}</span></td>
+          <td style="font-family:'DM Mono',monospace;color:var(--text3)">${g.weight}%</td>
+          <td style="font-family:'DM Mono',monospace;color:var(--text2)">${((g.score*g.weight)/100).toFixed(1)}</td>
+          <td><button class="icon-btn del" onclick="deleteGradeUI('${yid}','${cid}','${sid}',${i})">✕</button></td></tr>`;
+      });
+      html += `</tbody></table>`;
+    }
+  }
+
+  if (activeTab === 'attendance') {
+    html += `<div class="section-header"><div><div class="section-title">Attendance</div>
+      ${ar !== null ? `<div style="font-size:28px;font-family:'DM Serif Display',serif;color:${ar>=80?'var(--good)':ar>=60?'var(--warn)':'var(--danger)'}">${ar}%</div><div style="font-size:12px;color:var(--text3)">${(s.attendance||[]).filter(r=>r.status==='present').length}/${(s.attendance||[]).length} present</div>` : ''}
+    </div><button class="btn btn-primary" onclick="openAddAttendance('${yid}','${cid}','${sid}')">+ Log</button></div>`;
+    if (!s.attendance || s.attendance.length === 0) { html += `<div class="empty-state"><div class="ei">📅</div>No records yet.</div>`; }
+    else {
+      html += `<div class="attend-entries">`;
+      [...s.attendance].reverse().forEach((r, i) => {
+        const statusMap = { present: ['status-present','Present'], absent: ['status-absent','Absent'], late: ['status-late','Late'] };
+        const [scls, slabel] = statusMap[r.status] || ['',''];
+        html += `<div class="attend-entry"><div class="attend-status ${scls}"></div><div class="attend-date">${r.date}</div>
+          <div class="attend-status-text">${slabel}</div><div class="attend-note">${r.note||''}</div>
+          <button class="icon-btn del" onclick="deleteAttendanceUI('${yid}','${cid}','${sid}',${(s.attendance.length-1-i)})">✕</button></div>`;
+      });
+      html += `</div>`;
+    }
+  }
+
+  if (activeTab === 'behavior') {
+    html += `<div class="section-header"><div class="section-title">Behavior Reports</div>
+      <button class="btn btn-primary" onclick="openAddBehavior('${yid}','${cid}','${sid}')">+ Add Report</button></div>`;
+    if (!s.behavior || s.behavior.length === 0) { html += `<div class="empty-state"><div class="ei">📝</div>No reports yet.</div>`; }
+    else {
+      const tagMap = { positive: 'tag-positive', neutral: 'tag-neutral', negative: 'tag-negative' };
+      [...s.behavior].reverse().forEach((b, i) => {
+        html += `<div class="behavior-entry"><div class="be-meta"><div class="be-date">${b.date}</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span class="behavior-tag ${tagMap[b.type]||'tag-neutral'}">${b.type||'note'}</span>
+            <button class="icon-btn del" onclick="deleteBehaviorUI('${yid}','${cid}','${sid}',${(s.behavior.length-1-i)})">✕</button>
+          </div></div><div class="be-note">${b.note}</div></div>`;
+      });
+    }
+  }
+
+  document.getElementById('mainContent').innerHTML = html;
+}
+
+function setHeaderActions(html) {
+  document.getElementById('headerActions').innerHTML = html;
+}
+
+// ── NAVIGATION ────────────────────────────────────────────────────────
+window.selectYear = function(yid) {
+  currentView = { type: 'welcome', yearId: yid, classId: null, studentId: null };
+  renderSidebar(); renderWelcome();
+}
+window.selectClass = function(yid, cid) {
+  currentView = { type: 'class', yearId: yid, classId: cid, studentId: null };
+  activeTab = 'grades'; renderSidebar(); renderClassView(yid, cid);
+}
+window.selectStudent = function(yid, cid, sid) {
+  currentView = { type: 'student', yearId: yid, classId: cid, studentId: sid };
+  activeTab = 'grades'; renderSidebar(); renderStudentView(yid, cid, sid);
+}
+window.switchTab = function(tab, yid, cid, sid) { activeTab = tab; renderStudentView(yid, cid, sid); }
+window.filterStudents = function(q) {
+  document.querySelectorAll('#studentTbody tr[data-name]').forEach(r => {
+    r.style.display = r.dataset.name.includes(q.toLowerCase()) ? '' : 'none';
+  });
+}
+
+// ── MODAL ─────────────────────────────────────────────────────────────
+window.openModal = function(title, body, footer) {
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalBody').innerHTML = body;
+  document.getElementById('modalFooter').innerHTML = footer;
+  document.getElementById('modalOverlay').classList.remove('hidden');
+}
+window.closeModal = function() { document.getElementById('modalOverlay').classList.add('hidden'); }
+document.getElementById('modalOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+
+// ── YEAR ──────────────────────────────────────────────────────────────
+window.openAddYear = function() {
+  openModal('Add Academic Year',
+    `<div class="form-group"><label>Year Name</label><input id="f_yearName" placeholder="2024–2025"></div>`,
+    `<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+     <button class="btn btn-primary" onclick="doAddYear()">Add Year</button>`);
+}
+window.doAddYear = async function() {
+  const name = document.getElementById('f_yearName').value.trim();
+  if (!name) return;
+  closeModal();
+  const ref = await addDoc(yearsCol, { name, classes: [] });
+  currentView.yearId = ref.id;
+}
+
+// ── CLASS ─────────────────────────────────────────────────────────────
+window.openAddClass = function(yid) {
+  openModal('Add Class',
+    `<div class="form-group"><label>Class Name</label><input id="f_className" placeholder="Reading – Grade 5"></div>`,
+    `<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+     <button class="btn btn-primary" onclick="doAddClass('${yid}')">Add Class</button>`);
+}
+window.doAddClass = async function(yid) {
+  const name = document.getElementById('f_className').value.trim(); if (!name) return;
+  closeModal();
+  const newClass = { id: Date.now().toString(36), name, students: [] };
+  await updateYearDoc(yid, y => { y.classes = [...(y.classes||[]), newClass]; return y; });
+  currentView.classId = newClass.id;
+  selectClass(yid, newClass.id);
+}
+window.openEditClass = function(yid, cid) {
+  const cls = getClass(yid, cid);
+  openModal('Edit Class',
+    `<div class="form-group"><label>Class Name</label><input id="f_className" value="${cls.name}"></div>`,
+    `<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+     <button class="btn btn-primary" onclick="doEditClass('${yid}','${cid}')">Save</button>`);
+}
+window.doEditClass = async function(yid, cid) {
+  const name = document.getElementById('f_className').value.trim(); if (!name) return;
+  closeModal();
+  await updateYearDoc(yid, y => { const c = y.classes.find(c => c.id === cid); if(c) c.name = name; return y; });
+}
+window.deleteClassUI = async function(yid, cid) {
+  if (!confirm('Delete this class and all students?')) return;
+  await updateYearDoc(yid, y => { y.classes = y.classes.filter(c => c.id !== cid); return y; });
+  currentView = { type: 'welcome', yearId: yid, classId: null, studentId: null };
+  renderSidebar(); renderWelcome();
+}
+
+// ── STUDENT ───────────────────────────────────────────────────────────
+function studentFormHTML(s) {
+  return `<div class="form-row">
+    <div class="form-group"><label>Full Name *</label><input id="f_name" value="${s?.name||''}" placeholder="Student name"></div>
+    <div class="form-group"><label>Grade Level</label><input id="f_gradeLevel" value="${s?.gradeLevel||''}" placeholder="5th Grade"></div>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label>Phone</label><input id="f_phone" value="${s?.phone||''}" placeholder="Parent phone"></div>
+    <div class="form-group"><label>Email</label><input id="f_email" value="${s?.email||''}" placeholder="Parent email"></div>
+  </div>
+  <div class="form-row">
+    <div class="form-group"><label>Join Date</label><input id="f_joinDate" type="date" value="${s?.joinDate||''}"></div>
+  </div>
+  <div class="form-group"><label>Notes</label><textarea id="f_notes" placeholder="Notes about this student…">${s?.notes||''}</textarea></div>`;
+}
+window.openAddStudent = function(yid, cid) {
+  openModal('Add Student', studentFormHTML(null),
+    `<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+     <button class="btn btn-primary" onclick="doAddStudent('${yid}','${cid}')">Add Student</button>`);
+}
+window.doAddStudent = async function(yid, cid) {
+  const name = document.getElementById('f_name').value.trim(); if (!name) return alert('Name required.');
+  const student = {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2,5),
+    name, gradeLevel: document.getElementById('f_gradeLevel').value.trim(),
+    phone: document.getElementById('f_phone').value.trim(), email: document.getElementById('f_email').value.trim(),
+    joinDate: document.getElementById('f_joinDate').value, notes: document.getElementById('f_notes').value.trim(),
+    grades: [], attendance: [], behavior: []
+  };
+  closeModal();
+  await updateYearDoc(yid, y => { const c = y.classes.find(c => c.id === cid); c.students = [...(c.students||[]), student]; return y; });
+}
+window.openEditStudent = function(yid, cid, sid) {
+  const s = getStudent(yid, cid, sid);
+  openModal('Edit Student', studentFormHTML(s),
+    `<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+     <button class="btn btn-primary" onclick="doEditStudent('${yid}','${cid}','${sid}')">Save</button>`);
+}
+window.doEditStudent = async function(yid, cid, sid) {
+  closeModal();
+  await updateYearDoc(yid, y => {
+    const c = y.classes.find(c => c.id === cid);
+    const s = c.students.find(s => s.id === sid);
+    s.name = document.getElementById('f_name').value.trim() || s.name;
+    s.gradeLevel = document.getElementById('f_gradeLevel').value.trim();
+    s.phone = document.getElementById('f_phone').value.trim();
+    s.email = document.getElementById('f_email').value.trim();
+    s.joinDate = document.getElementById('f_joinDate').value;
+    s.notes = document.getElementById('f_notes').value.trim();
+    return y;
+  });
+  if (currentView.type === 'student') renderStudentView(yid, cid, sid);
+}
+window.deleteStudentUI = async function(yid, cid, sid) {
+  if (!confirm('Delete this student?')) return;
+  await updateYearDoc(yid, y => { const c = y.classes.find(c => c.id === cid); c.students = c.students.filter(s => s.id !== sid); return y; });
+}
+
+// ── GRADES ────────────────────────────────────────────────────────────
+window.openAddGrade = function(yid, cid, sid) {
+  openModal('Add Grade',
+    `<div class="form-row">
+      <div class="form-group"><label>Assignment *</label><input id="f_gname" placeholder="Midterm Exam"></div>
+      <div class="form-group"><label>Category</label><input id="f_gcat" placeholder="Exam, HW, Quiz…"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Score (0–100)</label><input id="f_gscore" type="number" min="0" max="100" placeholder="85"></div>
+      <div class="form-group"><label>Weight (%)</label><input id="f_gweight" type="number" min="0" max="100" value="20"></div>
+    </div>`,
+    `<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+     <button class="btn btn-primary" onclick="doAddGrade('${yid}','${cid}','${sid}')">Add</button>`);
+}
+window.doAddGrade = async function(yid, cid, sid) {
+  const name = document.getElementById('f_gname').value.trim();
+  const score = parseFloat(document.getElementById('f_gscore').value);
+  const weight = parseFloat(document.getElementById('f_gweight').value);
+  if (!name || isNaN(score) || isNaN(weight)) return alert('Fill all fields.');
+  closeModal();
+  await updateYearDoc(yid, y => {
+    const s = y.classes.find(c=>c.id===cid).students.find(s=>s.id===sid);
+    s.grades = [...(s.grades||[]), { name, category: document.getElementById('f_gcat').value.trim(), score, weight }];
+    return y;
+  });
+  renderStudentView(yid, cid, sid);
+}
+window.deleteGradeUI = async function(yid, cid, sid, idx) {
+  await updateYearDoc(yid, y => {
+    const s = y.classes.find(c=>c.id===cid).students.find(s=>s.id===sid);
+    s.grades.splice(idx, 1); return y;
+  });
+  renderStudentView(yid, cid, sid);
+}
+
+// ── ATTENDANCE ────────────────────────────────────────────────────────
+window.openAddAttendance = function(yid, cid, sid) {
+  const today = new Date().toISOString().slice(0,10);
+  openModal('Log Attendance',
+    `<div class="form-row">
+      <div class="form-group"><label>Date</label><input id="f_adate" type="date" value="${today}"></div>
+      <div class="form-group"><label>Status</label><select id="f_astatus"><option value="present">Present</option><option value="absent">Absent</option><option value="late">Late</option></select></div>
+    </div>
+    <div class="form-group"><label>Note</label><input id="f_anote" placeholder="Optional note"></div>`,
+    `<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+     <button class="btn btn-primary" onclick="doAddAttendance('${yid}','${cid}','${sid}')">Log</button>`);
+}
+window.doAddAttendance = async function(yid, cid, sid) {
+  const entry = { date: document.getElementById('f_adate').value, status: document.getElementById('f_astatus').value, note: document.getElementById('f_anote').value.trim() };
+  closeModal();
+  await updateYearDoc(yid, y => {
+    const s = y.classes.find(c=>c.id===cid).students.find(s=>s.id===sid);
+    s.attendance = [...(s.attendance||[]), entry]; return y;
+  });
+  renderStudentView(yid, cid, sid);
+}
+window.deleteAttendanceUI = async function(yid, cid, sid, idx) {
+  await updateYearDoc(yid, y => {
+    const s = y.classes.find(c=>c.id===cid).students.find(s=>s.id===sid);
+    s.attendance.splice(idx,1); return y;
+  });
+  renderStudentView(yid, cid, sid);
+}
+
+// ── BEHAVIOR ──────────────────────────────────────────────────────────
+window.openAddBehavior = function(yid, cid, sid) {
+  const today = new Date().toISOString().slice(0,10);
+  openModal('Add Behavior Report',
+    `<div class="form-row">
+      <div class="form-group"><label>Date</label><input id="f_bdate" type="date" value="${today}"></div>
+      <div class="form-group"><label>Type</label><select id="f_btype"><option value="positive">Positive</option><option value="neutral">Neutral</option><option value="negative">Negative</option></select></div>
+    </div>
+    <div class="form-group"><label>Report *</label><textarea id="f_bnote" placeholder="Describe the behavior…"></textarea></div>`,
+    `<button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+     <button class="btn btn-primary" onclick="doAddBehavior('${yid}','${cid}','${sid}')">Save</button>`);
+}
+window.doAddBehavior = async function(yid, cid, sid) {
+  const note = document.getElementById('f_bnote').value.trim(); if (!note) return alert('Write a report.');
+  const entry = { date: document.getElementById('f_bdate').value, type: document.getElementById('f_btype').value, note };
+  closeModal();
+  await updateYearDoc(yid, y => {
+    const s = y.classes.find(c=>c.id===cid).students.find(s=>s.id===sid);
+    s.behavior = [...(s.behavior||[]), entry]; return y;
+  });
+  renderStudentView(yid, cid, sid);
+}
+window.deleteBehaviorUI = async function(yid, cid, sid, idx) {
+  await updateYearDoc(yid, y => {
+    const s = y.classes.find(c=>c.id===cid).students.find(s=>s.id===sid);
+    s.behavior.splice(idx,1); return y;
+  });
+  renderStudentView(yid, cid, sid);
+}
+
+</script>
+</body>
+</html>
